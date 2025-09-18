@@ -1,7 +1,7 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
+import { createClient } from "@/features/auth/lib/supabase/client";
+import { Button } from "@/features/shared/components/ui/button";
 import { useRouter } from "next/navigation";
 
 export function LogoutButton() {
