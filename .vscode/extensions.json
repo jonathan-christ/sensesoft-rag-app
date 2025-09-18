@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "eamodio.gitlens",
+    "usernamehw.errorlens",
+    "naumovs.color-highlight",
+    "johnsoncodehk.vscode-tsconfig-helper",
+    "GitHub.vscode-pull-request-github"
+  ]
+}
