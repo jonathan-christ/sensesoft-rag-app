@@ -1,0 +1,21 @@
+# Ignore artifacts:
+build
+coverage
+dist
+node_modules
+docker-compose.yml
+
+# Ignore lockfiles
+yarn.lock
+package-lock.json
+bun.lockb
+pnpm-lock.yaml
+
+# Other common ignores
+.DS_Store
+*.log
+.env
+.env.*
+!/.env.example
+eslint.config.js
+prettier.config.js
