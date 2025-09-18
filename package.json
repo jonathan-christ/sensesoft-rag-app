@@ -18,6 +18,8 @@
     "@supabase/supabase-js": "^2.57.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "lefthook": "^1.13.1",
+    "lint-staged": "^16.1.6",
     "lucide-react": "^0.544.0",
     "next": "15.5.3",
     "prettier": "^3.6.2",
@@ -36,5 +38,13 @@
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.8",
     "typescript": "^5"
+  },
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx,json,css,scss,md,html,yaml,yml}": [
+      "prettier --write --ignore-unknown"
+    ],
+    "**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix"
+    ]
   }
 }
