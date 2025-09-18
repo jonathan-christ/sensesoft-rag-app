@@ -50,4 +50,3 @@ jobs:
         run: pnpm run format:check
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
-
