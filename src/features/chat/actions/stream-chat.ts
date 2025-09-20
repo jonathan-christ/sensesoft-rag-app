@@ -7,7 +7,7 @@ export async function streamChat(
   req: StreamChatRequest,
 ): Promise<StreamChatResponse> {
   const stream = new PassThrough();
-  
+
   streamChatFromAdapter({
     ...req,
     model: "gemini-2.5-flash",
