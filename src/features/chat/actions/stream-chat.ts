@@ -1,5 +1,5 @@
-import { streamChat as streamChatFromAdapter } from "../../server/llm/providers/gemini";
-import { StreamChatRequest, StreamChatResponse } from "../shared/lib/types";
+import { streamChat as streamChatFromAdapter } from "../../../server/llm/providers/gemini";
+import { StreamChatRequest, StreamChatResponse } from "../../shared/lib/types";
 import { PassThrough } from "stream";
 
 // Stream chat completion (SSE-friendly)

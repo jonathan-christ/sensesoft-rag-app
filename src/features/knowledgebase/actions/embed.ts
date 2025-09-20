@@ -1,5 +1,5 @@
-import { embed as embedFromAdapter } from "../../server/llm/providers/gemini";
-import { EmbedRequest, EmbedResponse } from "../shared/lib/types";
+import { embed as embedFromAdapter } from "../../../server/llm/providers/gemini";
+import { EmbedRequest, EmbedResponse } from "../../shared/lib/types";
 
 // Generate embedding
 export async function embed({ text }: EmbedRequest): Promise<EmbedResponse> {
