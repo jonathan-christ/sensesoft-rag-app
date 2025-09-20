@@ -10,7 +10,7 @@ export interface Chat {
 export interface Message {
   id: string; // uuid
   chat_id: string; // uuid
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
   created_at: string; // timestamptz
 }
@@ -21,7 +21,7 @@ export interface Document {
   filename?: string;
   mime_type?: string;
   size_bytes?: number;
-  status: 'pending' | 'processing' | 'ready' | 'error';
+  status: "pending" | "processing" | "ready" | "error";
   created_at: string; // timestamptz
   meta?: Json;
 }
@@ -57,10 +57,4 @@ export interface StreamChatResponse {
   model: string;
 }
 
-type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json }
-  | Json[];
+type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
