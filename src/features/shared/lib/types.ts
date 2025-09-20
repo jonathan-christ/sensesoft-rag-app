@@ -58,7 +58,9 @@ export interface StreamChatResponse {
 }
 
 export interface ChatStreamOptions extends StreamChatRequest {
-  stream: NodeJS.WritableStream;
+  model: string;
+  onToken: (delta: string) => void;
+  onFinal?: (full: string) => void;
   signal?: AbortSignal;
 }
 

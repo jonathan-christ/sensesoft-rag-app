@@ -21,7 +21,8 @@ export async function streamChat(opts: ChatStreamOptions): Promise<void> {
     messages,
     max_tokens = 1000,
     temperature = 0.7,
-    stream,
+    onToken,
+    onFinal,
     signal,
   } = opts;
 
@@ -40,13 +41,18 @@ export async function streamChat(opts: ChatStreamOptions): Promise<void> {
   const latestMessage = messages[messages.length - 1].content;
   const result = await chat.sendMessageStream(latestMessage);
 
+  let fullText = "";
   for await (const chunk of result.stream) {
     if (signal?.aborted) {
       return;
     }
-    stream.write(chunk.text());
+    const text = chunk.text();
+    fullText += text;
+    onToken(text);
   }
-  stream.end();
+  if (onFinal) {
+    onFinal(fullText);
+  }
 }
 
 export async function embed(opts: EmbedOptions): Promise<number[][]> {
