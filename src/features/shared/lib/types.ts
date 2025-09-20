@@ -57,4 +57,13 @@ export interface StreamChatResponse {
   model: string;
 }
 
+export interface ChatStreamOptions extends StreamChatRequest {
+  stream: NodeJS.WritableStream;
+  signal?: AbortSignal;
+}
+
+export interface EmbedOptions {
+  input: string | string[];
+}
+
 type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
