@@ -6,8 +6,6 @@ import {
 
 // Environment variables
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // Initialize clients
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');

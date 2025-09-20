@@ -23,7 +23,7 @@ export interface Document {
   size_bytes?: number;
   status: 'pending' | 'processing' | 'ready' | 'error';
   created_at: string; // timestamptz
-  meta?: Record<string, any>;
+  meta?: Json;
 }
 
 export interface Chunk {
@@ -32,7 +32,7 @@ export interface Chunk {
   chunk_index?: number;
   content: string;
   embedding: number[]; // vector(1536 | 3072)
-  meta?: Record<string, any>;
+  meta?: Json;
 }
 
 // LLM provider types
@@ -56,3 +56,11 @@ export interface StreamChatResponse {
   stream: AsyncGenerator<string>;
   model: string;
 }
+
+type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json }
+  | Json[];

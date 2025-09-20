@@ -12,7 +12,6 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // Initialize clients
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');
-const supabase = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
 
 // Generate embedding
 export async function embed({ text }: EmbedRequest): Promise<EmbedResponse> {
