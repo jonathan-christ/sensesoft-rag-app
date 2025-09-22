@@ -35,37 +35,4 @@ export interface Chunk {
   meta?: Json;
 }
 
-// LLM provider types
-export interface EmbedRequest {
-  text: string;
-}
-
-export interface EmbedResponse {
-  embedding: number[];
-  model: string;
-  dimensions: 1536 | 3072;
-}
-
-export interface StreamChatRequest {
-  messages: Message[];
-  max_tokens?: number;
-  temperature?: number;
-}
-
-export interface StreamChatResponse {
-  stream: AsyncGenerator<string>;
-  model: string;
-}
-
-export interface ChatStreamOptions extends StreamChatRequest {
-  model: string;
-  onToken: (delta: string) => void;
-  onFinal?: (full: string) => void;
-  signal?: AbortSignal;
-}
-
-export interface EmbedOptions {
-  input: string | string[];
-}
-
 type Json = string | number | boolean | null | { [key: string]: Json } | Json[];

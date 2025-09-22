@@ -1,5 +1,8 @@
 import { streamChat as streamChatFromAdapter } from "../../../server/llm/providers/gemini";
-import { StreamChatRequest, StreamChatResponse } from "../../shared/lib/types";
+import {
+  StreamChatRequest,
+  StreamChatResponse,
+} from "../../../server/llm/types";
 import { PassThrough } from "stream";
 
 // Stream chat completion (SSE-friendly)
@@ -11,7 +14,7 @@ export async function streamChat(
   streamChatFromAdapter({
     ...req,
     model: "gemini-2.5-flash",
-    onToken: (delta) => {
+    onToken: (delta: string) => {
       stream.write(delta);
     },
     onFinal: () => {

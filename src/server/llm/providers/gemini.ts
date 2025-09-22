@@ -4,11 +4,8 @@ import {
   EMBEDDING_MODEL,
   GOOGLE_GENAI_API_KEY,
 } from "../../config";
-import type {
-  ChatStreamOptions,
-  EmbedOptions,
-  Message,
-} from "../../../features/shared/lib/types";
+import type { Message } from "../../../features/shared/lib/types";
+import type { ChatStreamOptions, EmbedOptions } from "../types";
 
 if (!GOOGLE_GENAI_API_KEY) {
   throw new Error("Missing GOOGLE_GENAI_API_KEY in environment variables");
