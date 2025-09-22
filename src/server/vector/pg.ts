@@ -1,13 +1,12 @@
 // src/server/vector/pg.ts
 import { createClient } from "@/features/auth/lib/supabase/server";
-import { EMBEDDING_DIM } from "@/server/config";
 
 export async function storeEmbeddings(
   embeddings: number[][],
   userId: string,
   documentId: string,
   contents: string[],
-  metas: Record<string, any>[],
+  metas: Record<string, unknown>[],
 ): Promise<void> {
   if (
     embeddings.length !== contents.length ||
