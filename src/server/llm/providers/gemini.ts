@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-import type { Message } from "@/features/shared/lib/types";
+import type { Message } from "@/lib/types";
 
 import {
   CHAT_MODEL,
