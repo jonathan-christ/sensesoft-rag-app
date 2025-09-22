@@ -33,7 +33,9 @@ export async function streamChat(opts: ChatStreamOptions): Promise<void> {
   const conversation = messages.filter((msg) => msg.role !== "system");
 
   if (!conversation.length) {
-    throw new Error("streamChat requires a user or assistant message to continue");
+    throw new Error(
+      "streamChat requires a user or assistant message to continue",
+    );
   }
 
   const model = genAI.getGenerativeModel({

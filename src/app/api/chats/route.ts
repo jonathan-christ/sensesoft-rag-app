@@ -20,13 +20,19 @@ export async function GET(_req: NextRequest) {
 
     if (error) {
       console.error("Error fetching chats:", error);
-      return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Internal Server Error" },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json(chats);
   } catch (error) {
     console.error("Error in GET /api/chats:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -51,12 +57,18 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("Error creating chat:", error);
-      return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Internal Server Error" },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json(newChat, { status: 201 });
   } catch (error) {
     console.error("Error in POST /api/chats:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

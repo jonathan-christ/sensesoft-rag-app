@@ -4,10 +4,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { chatId, messages, topK } = (await req.json()) as StreamChatRequest & {
-      chatId?: string;
-      topK?: number;
-    };
+    const { chatId, messages, topK } =
+      (await req.json()) as StreamChatRequest & {
+        chatId?: string;
+        topK?: number;
+      };
 
     const { stream } = await streamChat({ chatId, messages, topK });
 
@@ -29,6 +30,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Error in chat API route:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

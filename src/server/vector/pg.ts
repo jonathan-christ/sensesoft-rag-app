@@ -12,7 +12,9 @@ export async function storeEmbeddings(
     embeddings.length !== contents.length ||
     embeddings.length !== metas.length
   ) {
-    throw new Error("Embeddings, contents, and metas must have the same length.");
+    throw new Error(
+      "Embeddings, contents, and metas must have the same length.",
+    );
   }
 
   const supabase = await createClient();
@@ -32,5 +34,7 @@ export async function storeEmbeddings(
     throw error;
   }
 
-  console.log(`Stored ${embeddings.length} embeddings for document ${documentId}`);
+  console.log(
+    `Stored ${embeddings.length} embeddings for document ${documentId}`,
+  );
 }

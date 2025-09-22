@@ -3,10 +3,7 @@ import { PassThrough } from "stream";
 import { createClient } from "@/features/auth/lib/supabase/server";
 import type { Message } from "@/features/shared/lib/types";
 import { streamChat as streamChatFromAdapter } from "@/server/llm/providers/gemini";
-import type {
-  StreamChatRequest,
-  StreamChatResponse,
-} from "@/server/llm/types";
+import type { StreamChatRequest, StreamChatResponse } from "@/server/llm/types";
 import { searchRelevantChunks } from "@/server/rag/retrieval";
 import type { RetrievedChunk } from "@/server/rag/retrieval";
 
@@ -64,7 +61,10 @@ export async function streamChat(
   const latestMessage = messages[messages.length - 1];
   const userQuery = latestMessage?.content ?? "";
 
-  const rawChunks = (await searchRelevantChunks(userQuery, topK)) as RetrievedChunk[];
+  const rawChunks = (await searchRelevantChunks(
+    userQuery,
+    topK,
+  )) as RetrievedChunk[];
   const { context, citations } = buildContextBlock(rawChunks);
 
   const sendEvent = (event: Record<string, unknown>) => {
@@ -85,7 +85,11 @@ export async function streamChat(
 
   const history = trimHistory(messages);
   const augmentedUserMessage = formatUserMessage(latestMessage, context);
-  const llmMessages: Message[] = [systemMessage, ...history, augmentedUserMessage];
+  const llmMessages: Message[] = [
+    systemMessage,
+    ...history,
+    augmentedUserMessage,
+  ];
 
   let fullResponse = "";
 
