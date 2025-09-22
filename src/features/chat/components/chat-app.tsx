@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/features/shared/components/ui/button";
 import { Input } from "@/features/shared/components/ui/input";
 import { Card, CardContent } from "@/features/shared/components/ui/card";
+import { streamChat } from "../actions/stream-chat";
+import { NextRequest } from "next/server";
 
 interface ChatRow {
   id: string;
@@ -125,8 +127,8 @@ export function ChatApp() {
     setInput("");
 
     try {
-      // Simulate streaming response
-      await simulateStreamingResponse(assistantMsg.id, currentInput);
+      // REAL STREAMING - Replace simulation with actual API call
+      await realStreamingResponse(assistantMsg.id, currentInput);
     } catch (error) {
       setMessages((prev) =>
         prev.map((m) =>
@@ -145,43 +147,48 @@ export function ChatApp() {
     }
   };
 
-  const simulateStreamingResponse = async (messageId: string, userInput: string) => {
-    // Simulate AI response based on user input
-    const responses = [
-      "I understand your question about ",
-      "That's an interesting point. Let me think about ",
-      "Based on what you've mentioned regarding ",
-      "I can help you with ",
-    ];
-    
-    const baseResponse = responses[Math.floor(Math.random() * responses.length)] + userInput.toLowerCase();
-    const fullResponse = baseResponse + ". Here's what I think would be most helpful for your situation.";
-    
-    const words = fullResponse.split(" ");
-    let currentText = "";
+  // REPLACE realStreamingResponse with this:
+  const realStreamingResponse = async (messageId: string, userInput: string) => {
+    const conversationHistory = messages.concat({
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: userInput,
+      created_at: new Date().toISOString(),
+    });
 
-    for (let i = 0; i < words.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * 100));
-      
-      currentText += (i > 0 ? " " : "") + words[i];
-      
+    try {
+      const response = await streamChat({
+        messages: conversationHistory.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+        model: "gemini-2.5-flash",
+      });
+
+      let assistantContent = "";
+
+      for await (const chunk of response.stream) {
+        assistantContent += chunk;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId ? { ...m, content: assistantContent } : m
+          )
+        );
+      }
+
+      // Mark streaming as complete
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === messageId ? { ...m, content: currentText } : m
+          m.id === messageId ? { ...m, _streaming: false } : m
         )
       );
+    } catch (error) {
+      throw error; // Re-throw to be handled by the calling function
     }
-
-    // Mark streaming as complete
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === messageId ? { ...m, _streaming: false } : m
-      )
-    );
   };
 
   const retryMessage = useCallback((messageId: string) => {
-    const message = messages.find(m => m.id === messageId);
+    const message = messages.find((m) => m.id === messageId);
     if (!message?._error) return;
 
     setMessages((prev) =>
@@ -282,7 +289,7 @@ export function ChatApp() {
               )}
             </div>
           ))}
-          
+
           {chats.length === 0 && (
             <div className="text-center text-muted-foreground text-sm p-4">
               No chats yet. Create your first chat!
@@ -314,14 +321,18 @@ export function ChatApp() {
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-muted-foreground">
                 <div className="text-lg mb-2">Welcome to AI Chat</div>
-                <div className="text-sm">Create a new chat or select an existing one to begin</div>
+                <div className="text-sm">
+                  Create a new chat or select an existing one to begin
+                </div>
               </div>
             </div>
           ) : messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-muted-foreground">
                 <div className="text-lg mb-2">Start a conversation</div>
-                <div className="text-sm">Type your message below to begin chatting</div>
+                <div className="text-sm">
+                  Type your message below to begin chatting
+                </div>
               </div>
             </div>
           ) : (
@@ -366,7 +377,7 @@ export function ChatApp() {
                         )}
                       </div>
                     )}
-                    
+
                     <div className="text-xs opacity-70 mt-2">
                       {new Date(msg.created_at).toLocaleTimeString()}
                     </div>
@@ -439,15 +450,46 @@ export function ChatApp() {
               )}
             </Button>
           </form>
-          
+
           <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
             <span>Press Enter to send, Shift+Enter for new line</span>
-            {input.length > 0 && (
-              <span>{input.length} characters</span>
-            )}
+            {input.length > 0 && <span>{input.length} characters</span>}
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+export async function POST(req: NextRequest) {
+  const { messages } = await req.json();
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        await streamChat({
+          messages,
+          model: "gemini-2.5-flash",
+          onToken: (delta: string) => {
+            controller.enqueue(encoder.encode(`data: ${delta}\n\n`));
+          },
+          onFinal: () => {
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            controller.close();
+          },
+        });
+      } catch (error) {
+        controller.error(error);
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/plain',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  });
 }
