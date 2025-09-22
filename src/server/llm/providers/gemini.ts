@@ -1,10 +1,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+
+import type { Message } from "@/features/shared/lib/types";
+
 import {
   CHAT_MODEL,
   EMBEDDING_MODEL,
   GOOGLE_GENAI_API_KEY,
 } from "../../config";
-import type { Message } from "../../../features/shared/lib/types";
 import type { ChatStreamOptions, EmbedOptions } from "../types";
 
 if (!GOOGLE_GENAI_API_KEY) {
@@ -23,20 +25,32 @@ export async function streamChat(opts: ChatStreamOptions): Promise<void> {
     signal,
   } = opts;
 
+  if (!messages.length) {
+    throw new Error("streamChat requires at least one message");
+  }
+
+  const systemMessage = messages.find((msg) => msg.role === "system");
+  const conversation = messages.filter((msg) => msg.role !== "system");
+
+  if (!conversation.length) {
+    throw new Error("streamChat requires a user or assistant message to continue");
+  }
+
   const model = genAI.getGenerativeModel({
     model: CHAT_MODEL,
+    systemInstruction: systemMessage?.content,
     generationConfig: { maxOutputTokens: max_tokens, temperature },
   });
 
-  const chat = model.startChat({
-    history: messages.slice(0, -1).map((msg: Message) => ({
-      role: msg.role === "assistant" ? "model" : "user",
-      parts: [{ text: msg.content }],
-    })),
-  });
+  const historyMessages = conversation.slice(0, -1).map((msg: Message) => ({
+    role: msg.role === "assistant" ? "model" : "user",
+    parts: [{ text: msg.content }],
+  }));
 
-  const latestMessage = messages[messages.length - 1].content;
-  const result = await chat.sendMessageStream(latestMessage);
+  const chat = model.startChat({ history: historyMessages });
+
+  const latestMessage = conversation[conversation.length - 1];
+  const result = await chat.sendMessageStream(latestMessage?.content ?? "");
 
   let fullText = "";
   for await (const chunk of result.stream) {
