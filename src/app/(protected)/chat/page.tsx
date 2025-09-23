@@ -20,7 +20,7 @@ interface Msg {
   _error?: string;
 }
 
-export function ChatApp() {
+function ChatApp() {
   const [chats, setChats] = useState<ChatRow[]>([
     { id: "1", title: "Welcome Chat", created_at: new Date().toISOString() },
   ]);
@@ -450,4 +450,10 @@ export function ChatApp() {
       </div>
     </div>
   );
+}
+
+export { ChatApp };
+
+export default function ChatPage() {
+  return <ChatApp />;
 }
