@@ -1,9 +1,30 @@
 "use client";
 
+/**
+ * BACKEND INTEGRATION GUIDE
+ * ========================
+ * 
+ * This chat component now uses the /api/chat/stream API route for backend integration.
+ * 
+ * TO ENABLE REAL BACKEND:
+ * 1. Set USE_REAL_BACKEND = true (line ~27)
+ * 2. Ensure your streamChat function in @/features/chat/actions/stream-chat works correctly
+ * 3. The API route at /app/api/chat/stream/route.ts handles the server-side streaming
+ * 4. Your GOOGLE_GENAI_API_KEY is now safely accessed server-side only
+ * 
+ * CURRENT STATE: Using simulation for development (USE_REAL_BACKEND = false)
+ * 
+ * ARCHITECTURE:
+ * Client (chat page) → API Route (/api/chat/stream) → streamChat function → Gemini API
+ * 
+ * The integration is ready - just flip the switch when your backend is complete!
+ */
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/features/shared/components/ui/button";
 import { Input } from "@/features/shared/components/ui/input";
 import { Card, CardContent } from "@/features/shared/components/ui/card";
+import type { Message } from "@/features/shared/lib/types";
 
 interface ChatRow {
   id: string;
@@ -18,6 +39,100 @@ interface Msg {
   created_at: string;
   _streaming?: boolean;
   _error?: string;
+}
+
+// TODO: Backend developers - replace this with your actual implementation
+const USE_REAL_BACKEND = false; // 🔄 TOGGLE THIS TO TRUE WHEN BACKEND IS READY
+
+/**
+ * Backend Integration Configuration
+ * =================================
+ * 
+ * When USE_REAL_BACKEND is true, the component will:
+ * - Convert UI messages to Message[] format expected by streamChat
+ * - Call streamChat() with proper parameters (messages, temperature, max_tokens)
+ * - Stream the response in real-time
+ * - Handle errors appropriately
+ * 
+ * When USE_REAL_BACKEND is false:
+ * - Uses simulation for frontend development
+ * - Maintains the same streaming UX
+ */
+
+/**
+ * Simulates streaming response for development purposes
+ * Backend developers: Remove this function when real implementation is ready
+ */
+const simulateStreamingResponse = async (messageId: string, userInput: string) => {
+  const responses = [
+    "I understand your question about ",
+    "That's an interesting point. Let me think about ",
+    "Based on what you've mentioned regarding ",
+    "I can help you with ",
+  ];
+  
+  const baseResponse = responses[Math.floor(Math.random() * responses.length)] + userInput.toLowerCase();
+  const fullResponse = baseResponse + ". Here's what I think would be most helpful for your situation.";
+  
+  const words = fullResponse.split(" ");
+  let currentText = "";
+
+  async function* streamGenerator() {
+    for (let i = 0; i < words.length; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * 100));
+      currentText += (i > 0 ? " " : "") + words[i];
+      yield currentText;
+    }
+  }
+
+  return {
+    stream: streamGenerator(),
+    model: "simulated-model"
+  };
+};
+
+/**
+ * Parses Server-Sent Events stream from the API
+ */
+async function* parseSSEStream(response: Response) {
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+
+  if (!reader) {
+    throw new Error("No response body");
+  }
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) break;
+      
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.error) {
+              throw new Error(data.error);
+            }
+            if (data.done) {
+              return;
+            }
+            if (data.content) {
+              yield data.content;
+            }
+          } catch (e) {
+            console.warn("Failed to parse SSE data:", line);
+          }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 function ChatApp() {
@@ -125,8 +240,7 @@ function ChatApp() {
     setInput("");
 
     try {
-      // Simulate streaming response
-      await simulateStreamingResponse(assistantMsg.id, currentInput);
+      await handleStreamingResponse(assistantMsg.id, currentInput);
     } catch (error) {
       setMessages((prev) =>
         prev.map((m) =>
@@ -145,39 +259,93 @@ function ChatApp() {
     }
   };
 
-  const simulateStreamingResponse = async (messageId: string, userInput: string) => {
-    // Simulate AI response based on user input
-    const responses = [
-      "I understand your question about ",
-      "That's an interesting point. Let me think about ",
-      "Based on what you've mentioned regarding ",
-      "I can help you with ",
-    ];
-    
-    const baseResponse = responses[Math.floor(Math.random() * responses.length)] + userInput.toLowerCase();
-    const fullResponse = baseResponse + ". Here's what I think would be most helpful for your situation.";
-    
-    const words = fullResponse.split(" ");
-    let currentText = "";
+  /**
+   * Handles streaming response from the backend
+   * Backend developers: This function integrates with your streamChat implementation
+   * 
+   * TESTING YOUR BACKEND:
+   * 1. Set USE_REAL_BACKEND = true
+   * 2. Send a message in the chat
+   * 3. Verify that streamChat receives the correct Message[] array
+   * 4. Ensure the response streams properly (word by word)
+   * 5. Check error handling works if streamChat fails
+   */
+  const handleStreamingResponse = async (messageId: string, userInput: string) => {
+    try {
+      let response;
 
-    for (let i = 0; i < words.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * 100));
-      
-      currentText += (i > 0 ? " " : "") + words[i];
-      
+      if (USE_REAL_BACKEND) {
+        // Convert current messages to the format expected by streamChat
+        const chatMessages: Message[] = messages
+          .filter(msg => !msg._streaming && !msg._error)
+          .map(msg => ({
+            id: msg.id,
+            chat_id: activeChatId,
+            role: msg.role,
+            content: msg.content,
+            created_at: msg.created_at,
+          }));
+
+        // Add the current user message
+        chatMessages.push({
+          id: `user-${Date.now()}`,
+          chat_id: activeChatId,
+          role: "user",
+          content: userInput,
+          created_at: new Date().toISOString(),
+        });
+
+        // Call the real backend via API route
+        console.log("🔄 Calling /api/chat/stream with:", { 
+          messageCount: chatMessages.length, 
+          lastMessage: chatMessages[chatMessages.length - 1]?.content 
+        });
+        
+        // Call the streaming API
+        const apiResponse = await fetch("/api/chat/stream", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messages: chatMessages,
+            temperature: 0.7,
+            max_tokens: 1000,
+          }),
+        });
+
+        if (!apiResponse.ok) {
+          throw new Error(`API call failed: ${apiResponse.status}`);
+        }
+
+        // Create a response object that matches the expected interface
+        response = {
+          stream: parseSSEStream(apiResponse),
+          model: "gemini-2.5-flash"
+        };
+      } else {
+        // Use simulation for development
+        response = await simulateStreamingResponse(messageId, userInput);
+      }
+
+      // Stream the response
+      for await (const chunk of response.stream) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId ? { ...m, content: chunk } : m
+          )
+        );
+      }
+
+      // Mark streaming as complete
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === messageId ? { ...m, content: currentText } : m
+          m.id === messageId ? { ...m, _streaming: false } : m
         )
       );
+    } catch (error) {
+      throw error; // Re-throw to be handled by the calling function
     }
-
-    // Mark streaming as complete
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === messageId ? { ...m, _streaming: false } : m
-      )
-    );
   };
 
   const retryMessage = useCallback((messageId: string) => {
@@ -192,7 +360,7 @@ function ChatApp() {
       )
     );
 
-    simulateStreamingResponse(messageId, "retry request").catch(() => {
+    handleStreamingResponse(messageId, "retry request").catch(() => {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === messageId
