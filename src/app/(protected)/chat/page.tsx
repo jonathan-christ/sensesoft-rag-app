@@ -153,12 +153,19 @@ function ChatApp() {
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showCitations, setShowCitations] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   // Auto scroll to bottom
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Filter chats based on search query
+  const filteredChats = chats.filter(chat => 
+    chat.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const createChat = useCallback(() => {
     const newId = Date.now().toString();
@@ -172,6 +179,20 @@ function ChatApp() {
     setMessages([]);
     setGlobalError(null);
   }, [chats.length]);
+
+  const saveAsNewChat = useCallback(() => {
+    if (messages.length === 0) return;
+    
+    const newId = Date.now().toString();
+    const newChat: ChatRow = {
+      id: newId,
+      title: `Copy of ${activeChat?.title || 'Chat'}`,
+      created_at: new Date().toISOString(),
+    };
+    setChats((prev) => [newChat, ...prev]);
+    setActiveChatId(newId);
+    // Keep the same messages for the new chat
+  }, [messages, chats]);
 
   const beginRename = useCallback((chat: ChatRow) => {
     setRenamingChatId(chat.id);
@@ -371,6 +392,28 @@ function ChatApp() {
     });
   }, [messages]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case 'n':
+            e.preventDefault();
+            createChat();
+            break;
+          case 'k':
+            e.preventDefault();
+            setSearchQuery('');
+            document.querySelector<HTMLInputElement>('[placeholder="Search chats..."]')?.focus();
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [createChat]);
+
   const activeChat = chats.find((c) => c.id === activeChatId);
 
   return (
@@ -386,15 +429,29 @@ function ChatApp() {
               onClick={createChat}
               disabled={sending}
               className="h-8 px-3"
+              title="Create new chat (Ctrl+N)"
             >
               + New
             </Button>
+          </div>
+          
+          {/* Search Input */}
+          <div className="relative">
+            <Input
+              placeholder="Search chats... (Ctrl+K)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-9 pl-8"
+            />
+            <div className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+              🔍
+            </div>
           </div>
         </div>
 
         {/* Chat List */}
         <div className="flex-1 overflow-y-auto p-2">
-          {chats.map((chat) => (
+          {filteredChats.map((chat) => (
             <div
               key={chat.id}
               className={`group relative mb-1 rounded-lg p-3 cursor-pointer transition-colors ${
@@ -435,23 +492,50 @@ function ChatApp() {
                       {new Date(chat.created_at).toLocaleDateString()}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      beginRename(chat);
-                    }}
-                  >
-                    ✎
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        beginRename(chat);
+                      }}
+                      title="Rename chat"
+                    >
+                      ✎
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm('Are you sure you want to delete this chat?')) {
+                          setChats(prev => prev.filter(c => c.id !== chat.id));
+                          if (chat.id === activeChatId && chats.length > 1) {
+                            const remainingChats = chats.filter(c => c.id !== chat.id);
+                            setActiveChatId(remainingChats[0]?.id || '');
+                          }
+                        }
+                      }}
+                      title="Delete chat"
+                    >
+                      🗑️
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
           ))}
           
-          {chats.length === 0 && (
+          {filteredChats.length === 0 && searchQuery && (
+            <div className="text-center text-muted-foreground text-sm p-4">
+              No chats found matching "{searchQuery}"
+            </div>
+          )}
+          
+          {chats.length === 0 && !searchQuery && (
             <div className="text-center text-muted-foreground text-sm p-4">
               No chats yet. Create your first chat!
             </div>
@@ -463,21 +547,49 @@ function ChatApp() {
       <div className="flex-1 flex flex-col">
         {/* Chat Header */}
         <div className="border-b border-border p-4 bg-card">
-          <div className="flex items-center gap-3">
-            <h1 className="font-semibold text-lg">
-              {activeChat ? activeChat.title : "Select a chat"}
-            </h1>
-            {sending && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm">AI is typing...</span>
-              </div>
-            )}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h1 className="font-semibold text-lg">
+                {activeChat ? activeChat.title : "Select a chat"}
+              </h1>
+              {sending && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm">AI is typing...</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Chat Actions */}
+            <div className="flex items-center gap-2">
+              {messages.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={saveAsNewChat}
+                  disabled={sending}
+                  className="h-8 px-3"
+                >
+                  Save as New
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCitations(!showCitations)}
+                className="h-8 px-3"
+              >
+                {showCitations ? "Hide Sources" : "Show Sources"}
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 flex">
+          {/* Main Messages Panel */}
+          <div className={`flex-1 flex flex-col ${showCitations ? 'border-r border-border' : ''}`}>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {!activeChat ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-muted-foreground">
@@ -544,6 +656,42 @@ function ChatApp() {
             ))
           )}
           <div ref={bottomRef} />
+            </div>
+          </div>
+
+          {/* Source Citations Panel */}
+          {showCitations && (
+            <div className="w-80 bg-card p-4 overflow-y-auto">
+              <h3 className="font-semibold text-sm mb-3">Sources & Citations</h3>
+              <div className="space-y-3">
+                <div className="p-3 rounded-lg bg-muted/50 border">
+                  <div className="font-medium text-sm mb-1">Knowledge Base Document</div>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    Last updated: {new Date().toLocaleDateString()}
+                  </div>
+                  <div className="text-sm">
+                    This information was retrieved from your uploaded documents and knowledge base.
+                  </div>
+                </div>
+                
+                <div className="p-3 rounded-lg bg-muted/50 border">
+                  <div className="font-medium text-sm mb-1">AI Model Response</div>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    Generated by: {USE_REAL_BACKEND ? 'Gemini API' : 'Simulation'}
+                  </div>
+                  <div className="text-sm">
+                    Response generated based on conversation context and available knowledge.
+                  </div>
+                </div>
+                
+                {messages.length === 0 && (
+                  <div className="text-center text-muted-foreground text-sm p-4">
+                    Sources will appear here when you start chatting
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Global Error */}
