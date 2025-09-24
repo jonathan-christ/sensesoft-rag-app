@@ -531,7 +531,7 @@ function ChatApp() {
           
           {filteredChats.length === 0 && searchQuery && (
             <div className="text-center text-muted-foreground text-sm p-4">
-              No chats found matching "{searchQuery}"
+              No chats found matching &quot;{searchQuery}&quot;
             </div>
           )}
           
