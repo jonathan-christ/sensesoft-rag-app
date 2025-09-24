@@ -164,7 +164,9 @@ function ChatApp() {
   const [renameValue, setRenameValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCitations, setShowCitations] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -243,16 +245,33 @@ function ChatApp() {
   }, []);
 
   const sendMessage = async () => {
-    if (!input.trim() || !activeChatId || sending) return;
+    if (
+      (!input.trim() && uploadedFiles.length === 0) ||
+      !activeChatId ||
+      sending
+    )
+      return;
 
     setGlobalError(null);
     setSending(true);
+
+    // Build message content with file information
+    let messageContent = input;
+    if (uploadedFiles.length > 0) {
+      const fileList = uploadedFiles
+        .map((file) => `📄 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`)
+        .join("\n");
+      messageContent =
+        uploadedFiles.length > 0 && input.trim()
+          ? `${input}\n\nAttached files:\n${fileList}`
+          : `Attached files:\n${fileList}`;
+    }
 
     // Add user message immediately
     const userMsg: Msg = {
       id: `user-${Date.now()}`,
       role: "user",
-      content: input,
+      content: messageContent,
       created_at: new Date().toISOString(),
     };
 
@@ -267,10 +286,18 @@ function ChatApp() {
 
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
     const currentInput = input;
+    const currentFiles = [...uploadedFiles];
+
+    // Clear input and files after sending
     setInput("");
+    setUploadedFiles([]);
 
     try {
-      await handleStreamingResponse(assistantMsg.id, currentInput);
+      await handleStreamingResponse(
+        assistantMsg.id,
+        currentInput,
+        currentFiles,
+      );
     } catch (error) {
       setMessages((prev) =>
         prev.map((m) =>
@@ -305,6 +332,7 @@ function ChatApp() {
   const handleStreamingResponse = async (
     messageId: string,
     userInput: string,
+    files?: File[],
   ) => {
     try {
       let response;
@@ -432,6 +460,31 @@ function ChatApp() {
   }, [createChat]);
 
   const activeChat = chats.find((c) => c.id === activeChatId);
+
+  // File upload handlers
+  const handleFileSelect = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files;
+      if (files) {
+        const newFiles = Array.from(files);
+        setUploadedFiles((prev) => [...prev, ...newFiles]);
+
+        // Reset the input so the same file can be selected again if needed
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    },
+    [],
+  );
+
+  const removeFile = useCallback((index: number) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const triggerFileInput = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
 
   return (
     <div className="flex h-screen bg-background">
@@ -752,6 +805,33 @@ function ChatApp() {
 
         {/* Input Area */}
         <div className="border-t border-border p-4 bg-card">
+          {/* Show uploaded files */}
+          {uploadedFiles.length > 0 && (
+            <div className="mb-3 space-y-2">
+              <div className="text-sm text-muted-foreground">
+                Uploaded files:
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {uploadedFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm"
+                  >
+                    <span className="text-primary">📄</span>
+                    <span className="truncate max-w-[200px]">{file.name}</span>
+                    <button
+                      onClick={() => removeFile(index)}
+                      className="text-muted-foreground hover:text-destructive ml-1"
+                      title="Remove file"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -778,9 +858,36 @@ function ChatApp() {
                 className="h-12 text-base"
               />
             </div>
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              accept=".pdf,.doc,.docx,.txt,.md"
+              className="hidden"
+            />
+
+            {/* Upload button */}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!activeChat || sending}
+              onClick={triggerFileInput}
+              className="h-12 px-4"
+              title="Upload documents"
+            >
+              <span className="text-lg">📎</span>
+            </Button>
+
             <Button
               type="submit"
-              disabled={!activeChat || !input.trim() || sending}
+              disabled={
+                !activeChat ||
+                (!input.trim() && uploadedFiles.length === 0) ||
+                sending
+              }
               className="h-12 px-6"
             >
               {sending ? (
