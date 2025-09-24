@@ -1,4 +1,4 @@
-import { Message } from "@/features/shared/lib/types";
+import { Message } from "@/lib/types";
 
 // LLM provider types
 export interface EmbedRequest {

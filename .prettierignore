@@ -19,3 +19,6 @@ pnpm-lock.yaml
 !/.env.example
 eslint.config.js
 prettier.config.js
+
+
+src/features/shared/components/ui/*
