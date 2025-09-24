@@ -38,8 +38,8 @@ function buildContextBlock(chunks: RetrievedChunk[]): {
   const citations = chunks.map((chunk) => ({
     chunkId: chunk.chunk_id,
     documentId: chunk.document_id,
-    filename: chunk.filename,
-    similarity: chunk.similarity,
+    filename: chunk.filename ?? undefined,
+    similarity: chunk.similarity ?? undefined,
   }));
 
   return { context, citations };

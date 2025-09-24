@@ -1,6 +1,8 @@
 // src/server/vector/pg.ts
 import { createClient } from "@/features/auth/lib/supabase/server";
 
+import type { Database, Json } from "@/lib/database.types";
+
 export async function storeEmbeddings(
   embeddings: number[][],
   userId: string,
@@ -19,12 +21,17 @@ export async function storeEmbeddings(
 
   const supabase = await createClient();
 
-  const chunksToInsert = embeddings.map((embedding, index) => ({
+  type ChunkTableInsert = Database["public"]["Tables"]["chunks"]["Insert"];
+
+  const chunksToInsert: ChunkTableInsert[] = embeddings.map((embedding, index) => ({
     document_id: documentId,
     chunk_index: index,
     content: contents[index],
-    embedding: embedding,
-    meta: metas[index],
+    // Supabase CLI currently models `vector` columns as `string` in the generated types.
+    // At runtime the client accepts `number[]`, so we cast purely for type compatibility
+    // without changing the payload we send to PostgREST.
+    embedding: embedding as unknown as ChunkTableInsert["embedding"],
+    meta: (metas[index] as Json | null) ?? null,
   }));
 
   const { error } = await supabase.from("chunks").insert(chunksToInsert);

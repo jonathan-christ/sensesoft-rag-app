@@ -1,19 +1,13 @@
 import { createClient } from "@/features/auth/lib/supabase/server";
 import { embed } from "@/features/knowledgebase/actions/embed";
+import type { Database } from "@/lib/database.types";
 
-interface MatchChunksParams {
-  query_embedding: number[];
-  match_count: number;
-  min_similarity: number;
-}
+type MatchChunksArgs = Database["public"]["Functions"]["match_chunks"]["Args"];
 
-export interface RetrievedChunk {
-  chunk_id: number;
-  content: string;
-  document_id: string;
-  filename?: string;
-  similarity?: number;
-}
+type MatchChunksReturn =
+  Database["public"]["Functions"]["match_chunks"]["Returns"][number];
+
+export type RetrievedChunk = MatchChunksReturn;
 
 export async function searchRelevantChunks(
   query: string,
@@ -23,16 +17,13 @@ export async function searchRelevantChunks(
   const supabase = await createClient();
   const { embedding } = await embed({ text: query });
 
-  const rpcArgs: MatchChunksParams = {
+  const rpcArgs: MatchChunksArgs = {
     query_embedding: embedding,
     match_count: topK,
     min_similarity: minSimilarity,
   };
 
-  const { data, error } = await supabase.rpc<RetrievedChunk[]>(
-    "match_chunks",
-    rpcArgs,
-  );
+  const { data, error } = await supabase.rpc("match_chunks", rpcArgs);
 
   if (error) {
     console.error("match_chunks RPC failed", error);
