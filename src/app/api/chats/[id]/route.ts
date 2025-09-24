@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const supabase = await createClient();
@@ -19,17 +19,14 @@ export async function PUT(
     const { title } = (await req.json()) as { title?: string };
 
     if (!title?.trim()) {
-      return NextResponse.json(
-        { error: "Title is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
     const { data: updatedChat, error } = await supabase
       .from("chats")
-      .update({ 
+      .update({
         title: title.trim(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq("id", chatId)
       .eq("user_id", user.id)
@@ -40,15 +37,12 @@ export async function PUT(
       console.error("Error updating chat:", error);
       return NextResponse.json(
         { error: "Internal Server Error" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     if (!updatedChat) {
-      return NextResponse.json(
-        { error: "Chat not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Chat not found" }, { status: 404 });
     }
 
     return NextResponse.json(updatedChat);
@@ -56,14 +50,14 @@ export async function PUT(
     console.error("Error in PUT /api/chats/[id]:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const supabase = await createClient();
@@ -87,7 +81,7 @@ export async function DELETE(
       console.error("Error deleting messages:", messagesError);
       return NextResponse.json(
         { error: "Internal Server Error" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -102,7 +96,7 @@ export async function DELETE(
       console.error("Error deleting chat:", chatError);
       return NextResponse.json(
         { error: "Internal Server Error" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -111,7 +105,7 @@ export async function DELETE(
     console.error("Error in DELETE /api/chats/[id]:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

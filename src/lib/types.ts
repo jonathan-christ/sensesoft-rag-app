@@ -19,8 +19,8 @@ export interface Message {
   role: "user" | "assistant" | "system";
   content: string;
   created_at: string;
-  _streaming?: boolean;  // true = content still being generated, false = final content received
-  _error?: string;       // error message if generation failed
+  _streaming?: boolean; // true = content still being generated, false = final content received
+  _error?: string; // error message if generation failed
 }
 
 export interface Document {

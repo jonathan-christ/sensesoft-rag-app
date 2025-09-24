@@ -105,21 +105,21 @@ async function* parseSSEStream(response: Response) {
 
       const chunk = decoder.decode(value, { stream: true });
       buffer += chunk;
-      
+
       // Split by lines to handle multiple events in one chunk
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || ''; // Keep incomplete line in buffer
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || ""; // Keep incomplete line in buffer
 
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
+        if (line.startsWith("data: ")) {
           try {
             const data = JSON.parse(line.slice(6));
-            if (data.type === 'token' && data.delta) {
+            if (data.type === "token" && data.delta) {
               yield data.delta;
-            } else if (data.type === 'final' && data.message) {
+            } else if (data.type === "final" && data.message) {
               yield data.message.content;
               return; // Final message received
-            } else if (data.type === 'done') {
+            } else if (data.type === "done") {
               return;
             }
           } catch (e) {
@@ -174,18 +174,20 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
   // Load messages for active chat
   const loadMessages = useCallback(async (chatId: string) => {
     if (!chatId) return;
-    
+
     try {
       const response = await fetch(`/api/chats/${chatId}/messages`);
       if (response.ok) {
         const messagesData = await response.json();
-        const formattedMessages: Message[] = messagesData.map((msg: Message) => ({
-          id: msg.id,
-          chat_id: msg.chat_id,
-          role: msg.role,
-          content: msg.content,
-          created_at: msg.created_at,
-        }));
+        const formattedMessages: Message[] = messagesData.map(
+          (msg: Message) => ({
+            id: msg.id,
+            chat_id: msg.chat_id,
+            role: msg.role,
+            content: msg.content,
+            created_at: msg.created_at,
+          }),
+        );
         setMessages(formattedMessages);
       } else {
         // New chat or error - start with welcome message
@@ -228,7 +230,7 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
       if (response.ok) {
         const newChat = await response.json();
         setChats((prev) => [newChat, ...prev]);
-        
+
         // Set the welcome message
         const welcomeMessage = {
           id: "welcome",
@@ -237,10 +239,10 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
           content: "Hello! I'm your AI assistant. How can I help you today?",
           created_at: new Date().toISOString(),
         };
-        
+
         setMessages([welcomeMessage]);
         setActiveChatId(newChat.id);
-        
+
         return newChat;
       }
     } catch (error) {
@@ -333,7 +335,7 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
       } catch (error) {
         console.error("Error renaming chat:", error);
       }
-      
+
       setRenamingChatId(null);
     },
     [renameValue],
@@ -346,60 +348,62 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
   }, []);
 
   // Delete chat via backend
-  const deleteChat = useCallback(async (chatId: string) => {
-    try {
-      const response = await fetch(`/api/chats/${chatId}`, {
-        method: "DELETE",
-      });
+  const deleteChat = useCallback(
+    async (chatId: string) => {
+      try {
+        const response = await fetch(`/api/chats/${chatId}`, {
+          method: "DELETE",
+        });
 
-      if (response.ok) {
-        setChats((prev) => prev.filter((c) => c.id !== chatId));
-        
-        // If we deleted the active chat, switch to another one or clear
-        if (chatId === activeChatId) {
-          const remainingChats = chats.filter((c) => c.id !== chatId);
-          if (remainingChats.length > 0) {
-            setActiveChatId(remainingChats[0].id);
-          } else {
-            setActiveChatId("");
-            setMessages([]);
+        if (response.ok) {
+          setChats((prev) => prev.filter((c) => c.id !== chatId));
+
+          // If we deleted the active chat, switch to another one or clear
+          if (chatId === activeChatId) {
+            const remainingChats = chats.filter((c) => c.id !== chatId);
+            if (remainingChats.length > 0) {
+              setActiveChatId(remainingChats[0].id);
+            } else {
+              setActiveChatId("");
+              setMessages([]);
+            }
           }
+        } else {
+          console.error("Failed to delete chat");
         }
-      } else {
-        console.error("Failed to delete chat");
+      } catch (error) {
+        console.error("Error deleting chat:", error);
       }
-    } catch (error) {
-      console.error("Error deleting chat:", error);
-    }
-  }, [chats, activeChatId]);
+    },
+    [chats, activeChatId],
+  );
 
   // Save user message to backend
-  const saveUserMessage = useCallback(async (chatId: string, content: string) => {
-    try {
-      const response = await fetch(`/api/chats/${chatId}/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ content }),
-      });
+  const saveUserMessage = useCallback(
+    async (chatId: string, content: string) => {
+      try {
+        const response = await fetch(`/api/chats/${chatId}/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ content }),
+        });
 
-      if (response.ok) {
-        const savedMessage = await response.json();
-        return savedMessage;
+        if (response.ok) {
+          const savedMessage = await response.json();
+          return savedMessage;
+        }
+      } catch (error) {
+        console.error("Error saving user message:", error);
       }
-    } catch (error) {
-      console.error("Error saving user message:", error);
-    }
-    return null;
-  }, []);
+      return null;
+    },
+    [],
+  );
 
   const sendMessage = async () => {
-    if (
-      (!input.trim() && uploadedFiles.length === 0) ||
-      sending
-    )
-      return;
+    if ((!input.trim() && uploadedFiles.length === 0) || sending) return;
 
     let currentChatId = activeChatId;
 
@@ -413,10 +417,10 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
       }
       currentChatId = newChat.id;
       setActiveChatId(newChat.id); // Set the new chat as active
-      
+
       // Update the chats list
       setChats((prevChats) => [newChat, ...prevChats]);
-      
+
       setCreatingNewChat(false);
     }
 
@@ -436,8 +440,11 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
     }
 
     // Save user message to backend first
-    const savedUserMessage = await saveUserMessage(currentChatId, messageContent);
-    
+    const savedUserMessage = await saveUserMessage(
+      currentChatId,
+      messageContent,
+    );
+
     // Add user message immediately
     const userMsg: Message = {
       id: savedUserMessage?.id || `user-${Date.now()}`,
@@ -570,7 +577,9 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
       for await (const chunk of response.stream) {
         accumulatedContent += chunk;
         setMessages((prev) =>
-          prev.map((m) => (m.id === messageId ? { ...m, content: accumulatedContent } : m)),
+          prev.map((m) =>
+            m.id === messageId ? { ...m, content: accumulatedContent } : m,
+          ),
         );
       }
 
@@ -673,418 +682,422 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
         </div>
       ) : (
         <>
-      {/* Left Sidebar */}
-      <div className="w-80 border-r border-border bg-card flex flex-col">
-        {/* Sidebar Header */}
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Chats</h2>
-            <Button
-              size="sm"
-              onClick={createChat}
-              disabled={sending}
-              className="h-8 px-3"
-              title="Create new chat (Ctrl+N)"
-            >
-              + New
-            </Button>
-          </div>
-
-          {/* Search Input */}
-          <div className="relative">
-            <Input
-              placeholder="Search chats... (Ctrl+K)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 pl-8"
-            />
-            <div className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-              🔍
-            </div>
-          </div>
-        </div>
-
-        {/* Chat List */}
-        <div className="flex-1 overflow-y-auto p-2">
-          {filteredChats.map((chat) => (
-            <div
-              key={chat.id}
-              className={`group relative mb-1 rounded-lg p-3 cursor-pointer transition-colors ${
-                chat.id === activeChatId
-                  ? "bg-primary/10 border border-primary/20"
-                  : "hover:bg-muted border border-transparent"
-              }`}
-              onClick={() => !sending && switchChat(chat.id)}
-            >
-              {renamingChatId === chat.id ? (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    submitRename(chat.id);
-                  }}
-                  className="flex gap-2"
-                >
-                  <Input
-                    autoFocus
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onBlur={() => submitRename(chat.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") {
-                        setRenamingChatId(null);
-                      }
-                    }}
-                    className="h-7 text-sm"
-                  />
-                </form>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">
-                      {chat.title}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(chat.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        beginRename(chat);
-                      }}
-                      title="Rename chat"
-                    >
-                      ✎
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (
-                          confirm("Are you sure you want to delete this chat?")
-                        ) {
-                          deleteChat(chat.id);
-                        }
-                      }}
-                      title="Delete chat"
-                    >
-                      🗑️
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-
-          {filteredChats.length === 0 && searchQuery && (
-            <div className="text-center text-muted-foreground text-sm p-4">
-              No chats found matching &quot;{searchQuery}&quot;
-            </div>
-          )}
-
-          {chats.length === 0 && !searchQuery && (
-            <div className="text-center text-muted-foreground text-sm p-4">
-              No chats yet. Create your first chat!
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Chat Header */}
-        <div className="border-b border-border p-4 bg-card">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h1 className="font-semibold text-lg">
-                {activeChat ? activeChat.title : "Select a chat"}
-              </h1>
-              {sending && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm">AI is typing...</span>
-                </div>
-              )}
-            </div>
-
-            {/* Chat Actions */}
-            <div className="flex items-center gap-2">
-              {messages.length > 0 && (
+          {/* Left Sidebar */}
+          <div className="w-80 border-r border-border bg-card flex flex-col">
+            {/* Sidebar Header */}
+            <div className="p-4 border-b border-border">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Chats</h2>
                 <Button
-                  variant="outline"
                   size="sm"
-                  onClick={saveAsNewChat}
+                  onClick={createChat}
                   disabled={sending}
                   className="h-8 px-3"
+                  title="Create new chat (Ctrl+N)"
                 >
-                  Save as New
+                  + New
                 </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowCitations(!showCitations)}
-                className="h-8 px-3"
-              >
-                {showCitations ? "Hide Sources" : "Show Sources"}
-              </Button>
+              </div>
+
+              {/* Search Input */}
+              <div className="relative">
+                <Input
+                  placeholder="Search chats... (Ctrl+K)"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-9 pl-8"
+                />
+                <div className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                  🔍
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Messages Area */}
-        <div className="flex-1 flex">
-          {/* Main Messages Panel */}
-          <div
-            className={`flex-1 flex flex-col ${showCitations ? "border-r border-border" : ""}`}
-          >
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {!activeChat ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center text-muted-foreground">
-                    <div className="text-lg mb-2">Welcome to AI Chat</div>
-                    <div className="text-sm">
-                      Create a new chat or select an existing one to begin
-                    </div>
-                  </div>
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center text-muted-foreground">
-                    <div className="text-lg mb-2">Start a conversation</div>
-                    <div className="text-sm">
-                      Type your message below to begin chatting
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${
-                      msg.role === "user" ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    <Card
-                      className={`max-w-[80%] ${
-                        msg.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : msg._error
-                            ? "bg-destructive/10 border-destructive/30"
-                            : "bg-muted"
-                      }`}
+            {/* Chat List */}
+            <div className="flex-1 overflow-y-auto p-2">
+              {filteredChats.map((chat) => (
+                <div
+                  key={chat.id}
+                  className={`group relative mb-1 rounded-lg p-3 cursor-pointer transition-colors ${
+                    chat.id === activeChatId
+                      ? "bg-primary/10 border border-primary/20"
+                      : "hover:bg-muted border border-transparent"
+                  }`}
+                  onClick={() => !sending && switchChat(chat.id)}
+                >
+                  {renamingChatId === chat.id ? (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        submitRename(chat.id);
+                      }}
+                      className="flex gap-2"
                     >
-                      <CardContent className="p-4">
-                        {msg._error ? (
-                          <div className="space-y-2">
-                            <div className="text-destructive text-sm font-medium">
-                              ⚠️ {msg._error}
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => retryMessage(msg.id)}
-                              className="h-7 px-3 text-xs"
-                            >
-                              Retry
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="text-sm whitespace-pre-wrap">
-                            {msg.content}
-                            {msg._streaming && (
-                              <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1">
-                                |
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="text-xs opacity-70 mt-2">
-                          {new Date(msg.created_at).toLocaleTimeString()}
+                      <Input
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={() => submitRename(chat.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") {
+                            setRenamingChatId(null);
+                          }
+                        }}
+                        className="h-7 text-sm"
+                      />
+                    </form>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">
+                          {chat.title}
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                ))
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(chat.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            beginRename(chat);
+                          }}
+                          title="Rename chat"
+                        >
+                          ✎
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              confirm(
+                                "Are you sure you want to delete this chat?",
+                              )
+                            ) {
+                              deleteChat(chat.id);
+                            }
+                          }}
+                          title="Delete chat"
+                        >
+                          🗑️
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {filteredChats.length === 0 && searchQuery && (
+                <div className="text-center text-muted-foreground text-sm p-4">
+                  No chats found matching &quot;{searchQuery}&quot;
+                </div>
               )}
-              <div ref={bottomRef} />
+
+              {chats.length === 0 && !searchQuery && (
+                <div className="text-center text-muted-foreground text-sm p-4">
+                  No chats yet. Create your first chat!
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Source Citations Panel */}
-          {showCitations && (
-            <div className="w-80 bg-card p-4 overflow-y-auto">
-              <h3 className="font-semibold text-sm mb-3">
-                Sources & Citations
-              </h3>
-              <div className="space-y-3">
-                <div className="p-3 rounded-lg bg-muted/50 border">
-                  <div className="font-medium text-sm mb-1">
-                    Knowledge Base Document
-                  </div>
-                  <div className="text-xs text-muted-foreground mb-2">
-                    Last updated: {new Date().toLocaleDateString()}
-                  </div>
-                  <div className="text-sm">
-                    This information was retrieved from your uploaded documents
-                    and knowledge base.
-                  </div>
+          {/* Main Chat Area */}
+          <div className="flex-1 flex flex-col">
+            {/* Chat Header */}
+            <div className="border-b border-border p-4 bg-card">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <h1 className="font-semibold text-lg">
+                    {activeChat ? activeChat.title : "Select a chat"}
+                  </h1>
+                  {sending && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm">AI is typing...</span>
+                    </div>
+                  )}
                 </div>
 
-                <div className="p-3 rounded-lg bg-muted/50 border">
-                  <div className="font-medium text-sm mb-1">
-                    AI Model Response
-                  </div>
-                  <div className="text-xs text-muted-foreground mb-2">
-                    Generated by:{" "}
-                    {USE_REAL_BACKEND ? "Gemini API" : "Simulation"}
-                  </div>
-                  <div className="text-sm">
-                    Response generated based on conversation context and
-                    available knowledge.
-                  </div>
-                </div>
-
-                {messages.length === 0 && (
-                  <div className="text-center text-muted-foreground text-sm p-4">
-                    Sources will appear here when you start chatting
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Global Error */}
-        {globalError && (
-          <div className="mx-4 mb-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
-            <div className="flex items-center gap-2 text-destructive text-sm">
-              <span>⚠️</span>
-              <span>{globalError}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setGlobalError(null)}
-                className="ml-auto h-6 w-6 p-0"
-              >
-                ×
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Input Area */}
-        <div className="border-t border-border p-4 bg-card">
-          {/* Show uploaded files */}
-          {uploadedFiles.length > 0 && (
-            <div className="mb-3 space-y-2">
-              <div className="text-sm text-muted-foreground">
-                Uploaded files:
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {uploadedFiles.map((file, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm"
-                  >
-                    <span className="text-primary">📄</span>
-                    <span className="truncate max-w-[200px]">{file.name}</span>
-                    <button
-                      onClick={() => removeFile(index)}
-                      className="text-muted-foreground hover:text-destructive ml-1"
-                      title="Remove file"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              sendMessage();
-            }}
-            className="flex gap-3"
-          >
-            <div className="flex-1">
-              <Input
-                placeholder={
-                  activeChat
-                    ? "Type your message..."
-                    : "Create or select a chat first"
-                }
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                disabled={!activeChat || sending}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && !sending) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                className="h-12 text-base"
-              />
-            </div>
-
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={handleFileSelect}
-              accept=".pdf,.doc,.docx,.txt,.md"
-              className="hidden"
-            />
-
-            {/* Upload button */}
-            <Button
-              type="button"
-              variant="outline"
-              disabled={!activeChat || sending}
-              onClick={triggerFileInput}
-              className="h-12 px-4"
-              title="Upload documents"
-            >
-              <span className="text-lg">📎</span>
-            </Button>
-
-            <Button
-              type="submit"
-              disabled={
-                !activeChat ||
-                (!input.trim() && uploadedFiles.length === 0) ||
-                sending
-              }
-              className="h-12 px-6"
-            >
-              {sending ? (
+                {/* Chat Actions */}
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  <span>Sending</span>
+                  {messages.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={saveAsNewChat}
+                      disabled={sending}
+                      className="h-8 px-3"
+                    >
+                      Save as New
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCitations(!showCitations)}
+                    className="h-8 px-3"
+                  >
+                    {showCitations ? "Hide Sources" : "Show Sources"}
+                  </Button>
                 </div>
-              ) : (
-                "Send"
-              )}
-            </Button>
-          </form>
+              </div>
+            </div>
 
-          <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-            <span>Press Enter to send, Shift+Enter for new line</span>
-            {input.length > 0 && <span>{input.length} characters</span>}
+            {/* Messages Area */}
+            <div className="flex-1 flex">
+              {/* Main Messages Panel */}
+              <div
+                className={`flex-1 flex flex-col ${showCitations ? "border-r border-border" : ""}`}
+              >
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {!activeChat ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center text-muted-foreground">
+                        <div className="text-lg mb-2">Welcome to AI Chat</div>
+                        <div className="text-sm">
+                          Create a new chat or select an existing one to begin
+                        </div>
+                      </div>
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center text-muted-foreground">
+                        <div className="text-lg mb-2">Start a conversation</div>
+                        <div className="text-sm">
+                          Type your message below to begin chatting
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    messages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`flex ${
+                          msg.role === "user" ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        <Card
+                          className={`max-w-[80%] ${
+                            msg.role === "user"
+                              ? "bg-primary text-primary-foreground"
+                              : msg._error
+                                ? "bg-destructive/10 border-destructive/30"
+                                : "bg-muted"
+                          }`}
+                        >
+                          <CardContent className="p-4">
+                            {msg._error ? (
+                              <div className="space-y-2">
+                                <div className="text-destructive text-sm font-medium">
+                                  ⚠️ {msg._error}
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => retryMessage(msg.id)}
+                                  className="h-7 px-3 text-xs"
+                                >
+                                  Retry
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="text-sm whitespace-pre-wrap">
+                                {msg.content}
+                                {msg._streaming && (
+                                  <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1">
+                                    |
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            <div className="text-xs opacity-70 mt-2">
+                              {new Date(msg.created_at).toLocaleTimeString()}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    ))
+                  )}
+                  <div ref={bottomRef} />
+                </div>
+              </div>
+
+              {/* Source Citations Panel */}
+              {showCitations && (
+                <div className="w-80 bg-card p-4 overflow-y-auto">
+                  <h3 className="font-semibold text-sm mb-3">
+                    Sources & Citations
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-lg bg-muted/50 border">
+                      <div className="font-medium text-sm mb-1">
+                        Knowledge Base Document
+                      </div>
+                      <div className="text-xs text-muted-foreground mb-2">
+                        Last updated: {new Date().toLocaleDateString()}
+                      </div>
+                      <div className="text-sm">
+                        This information was retrieved from your uploaded
+                        documents and knowledge base.
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-muted/50 border">
+                      <div className="font-medium text-sm mb-1">
+                        AI Model Response
+                      </div>
+                      <div className="text-xs text-muted-foreground mb-2">
+                        Generated by:{" "}
+                        {USE_REAL_BACKEND ? "Gemini API" : "Simulation"}
+                      </div>
+                      <div className="text-sm">
+                        Response generated based on conversation context and
+                        available knowledge.
+                      </div>
+                    </div>
+
+                    {messages.length === 0 && (
+                      <div className="text-center text-muted-foreground text-sm p-4">
+                        Sources will appear here when you start chatting
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Global Error */}
+            {globalError && (
+              <div className="mx-4 mb-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                <div className="flex items-center gap-2 text-destructive text-sm">
+                  <span>⚠️</span>
+                  <span>{globalError}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setGlobalError(null)}
+                    className="ml-auto h-6 w-6 p-0"
+                  >
+                    ×
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Input Area */}
+            <div className="border-t border-border p-4 bg-card">
+              {/* Show uploaded files */}
+              {uploadedFiles.length > 0 && (
+                <div className="mb-3 space-y-2">
+                  <div className="text-sm text-muted-foreground">
+                    Uploaded files:
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {uploadedFiles.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm"
+                      >
+                        <span className="text-primary">📄</span>
+                        <span className="truncate max-w-[200px]">
+                          {file.name}
+                        </span>
+                        <button
+                          onClick={() => removeFile(index)}
+                          className="text-muted-foreground hover:text-destructive ml-1"
+                          title="Remove file"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  sendMessage();
+                }}
+                className="flex gap-3"
+              >
+                <div className="flex-1">
+                  <Input
+                    placeholder={
+                      activeChat
+                        ? "Type your message..."
+                        : "Create or select a chat first"
+                    }
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    disabled={!activeChat || sending}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey && !sending) {
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                    className="h-12 text-base"
+                  />
+                </div>
+
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  accept=".pdf,.doc,.docx,.txt,.md"
+                  className="hidden"
+                />
+
+                {/* Upload button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!activeChat || sending}
+                  onClick={triggerFileInput}
+                  className="h-12 px-4"
+                  title="Upload documents"
+                >
+                  <span className="text-lg">📎</span>
+                </Button>
+
+                <Button
+                  type="submit"
+                  disabled={
+                    !activeChat ||
+                    (!input.trim() && uploadedFiles.length === 0) ||
+                    sending
+                  }
+                  className="h-12 px-6"
+                >
+                  {sending ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      <span>Sending</span>
+                    </div>
+                  ) : (
+                    "Send"
+                  )}
+                </Button>
+              </form>
+
+              <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                <span>Press Enter to send, Shift+Enter for new line</span>
+                {input.length > 0 && <span>{input.length} characters</span>}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      </>
+        </>
       )}
     </div>
   );
