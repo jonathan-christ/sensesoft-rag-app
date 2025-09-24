@@ -1,4 +1,10 @@
 // Shared schema-aligned types
+export interface ChatRow {
+  id: string;
+  title: string;
+  created_at: string;
+}
+
 export interface Chat {
   id: string;
   user_id: string;
@@ -13,6 +19,8 @@ export interface Message {
   role: "user" | "assistant" | "system";
   content: string;
   created_at: string;
+  _streaming?: boolean;  // true = content still being generated, false = final content received
+  _error?: string;       // error message if generation failed
 }
 
 export interface Document {

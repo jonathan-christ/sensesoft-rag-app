@@ -24,25 +24,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/features/shared/components/ui/button";
 import { Input } from "@/features/shared/components/ui/input";
 import { Card, CardContent } from "@/features/shared/components/ui/card";
-import type { Message } from "@/features/shared/lib/types";
+import type { Message, ChatRow } from "@/lib/types";
 
-interface ChatRow {
-  id: string;
-  title: string;
-  created_at: string;
-}
-
-interface Msg {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  created_at: string;
-  _streaming?: boolean;
-  _error?: string;
-}
-
-// TODO: Backend developers - replace this with your actual implementation
-const USE_REAL_BACKEND = false; // 🔄 TOGGLE THIS TO TRUE WHEN BACKEND IS READY
+// Backend is ready - enabling real backend integration
+const USE_REAL_BACKEND = true;
 
 /**
  * Backend Integration Configuration
@@ -101,11 +86,12 @@ const simulateStreamingResponse = async (
 };
 
 /**
- * Parses Server-Sent Events stream from the API
+ * Parses Server-Sent Events stream from the API (backend sends structured JSON events)
  */
 async function* parseSSEStream(response: Response) {
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
+  let buffer = "";
 
   if (!reader) {
     throw new Error("No response body");
@@ -117,25 +103,31 @@ async function* parseSSEStream(response: Response) {
 
       if (done) break;
 
-      const chunk = decoder.decode(value);
-      const lines = chunk.split("\n");
+      const chunk = decoder.decode(value, { stream: true });
+      buffer += chunk;
+      
+      // Split by lines to handle multiple events in one chunk
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
       for (const line of lines) {
-        if (line.startsWith("data: ")) {
+        if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.slice(6));
-            if (data.error) {
-              throw new Error(data.error);
-            }
-            if (data.done) {
+            if (data.type === 'token' && data.delta) {
+              yield data.delta;
+            } else if (data.type === 'final' && data.message) {
+              yield data.message.content;
+              return; // Final message received
+            } else if (data.type === 'done') {
               return;
-            }
-            if (data.content) {
-              yield data.content;
             }
           } catch (e) {
             console.warn("Failed to parse SSE data:", line);
           }
+        } else if (line.trim()) {
+          // Handle plain text chunks as fallback
+          yield line;
         }
       }
     }
@@ -144,19 +136,10 @@ async function* parseSSEStream(response: Response) {
   }
 }
 
-function ChatApp() {
-  const [chats, setChats] = useState<ChatRow[]>([
-    { id: "1", title: "Welcome Chat", created_at: new Date().toISOString() },
-  ]);
-  const [activeChatId, setActiveChatId] = useState<string>("1");
-  const [messages, setMessages] = useState<Msg[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: "Hello! I'm your AI assistant. How can I help you today?",
-      created_at: new Date().toISOString(),
-    },
-  ]);
+function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
+  const [chats, setChats] = useState<ChatRow[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string>(initialChatId || "");
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
@@ -165,8 +148,132 @@ function ChatApp() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCitations, setShowCitations] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creatingNewChat, setCreatingNewChat] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Load chats from backend
+  const loadChats = useCallback(async () => {
+    try {
+      const response = await fetch("/api/chats");
+      if (response.ok) {
+        const chatsData = await response.json();
+        setChats(chatsData);
+        if (chatsData.length > 0 && !activeChatId) {
+          setActiveChatId(chatsData[0].id);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading chats:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeChatId]);
+
+  // Load messages for active chat
+  const loadMessages = useCallback(async (chatId: string) => {
+    if (!chatId) return;
+    
+    try {
+      const response = await fetch(`/api/chats/${chatId}/messages`);
+      if (response.ok) {
+        const messagesData = await response.json();
+        const formattedMessages: Message[] = messagesData.map((msg: Message) => ({
+          id: msg.id,
+          chat_id: msg.chat_id,
+          role: msg.role,
+          content: msg.content,
+          created_at: msg.created_at,
+        }));
+        setMessages(formattedMessages);
+      } else {
+        // New chat or error - start with welcome message
+        setMessages([
+          {
+            id: "welcome",
+            chat_id: chatId,
+            role: "assistant",
+            content: "Hello! I'm your AI assistant. How can I help you today?",
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error loading messages:", error);
+      setMessages([
+        {
+          id: "welcome",
+          chat_id: chatId,
+          role: "assistant",
+          content: "Hello! I'm your AI assistant. How can I help you today?",
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    }
+  }, []);
+
+  // Create new chat via backend
+  const createChatInBackend = useCallback(async (title?: string) => {
+    setCreatingNewChat(true);
+    try {
+      const response = await fetch("/api/chats", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title }),
+      });
+
+      if (response.ok) {
+        const newChat = await response.json();
+        setChats((prev) => [newChat, ...prev]);
+        
+        // Set the welcome message
+        const welcomeMessage = {
+          id: "welcome",
+          chat_id: newChat.id,
+          role: "assistant" as const,
+          content: "Hello! I'm your AI assistant. How can I help you today?",
+          created_at: new Date().toISOString(),
+        };
+        
+        setMessages([welcomeMessage]);
+        setActiveChatId(newChat.id);
+        
+        return newChat;
+      }
+    } catch (error) {
+      console.error("Error creating chat:", error);
+    } finally {
+      setCreatingNewChat(false);
+    }
+    return null;
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    const initializeApp = async () => {
+      await loadChats();
+      // If we have an initialChatId, set it as active
+      if (initialChatId) {
+        setActiveChatId(initialChatId);
+      }
+      // Don't create a default chat automatically - let user initiate first conversation
+    };
+    initializeApp();
+  }, [initialChatId]);
+
+  // Load messages when active chat changes
+  useEffect(() => {
+    if (activeChatId && !creatingNewChat) {
+      // Clear messages immediately to prevent duplication
+      setMessages([]);
+      loadMessages(activeChatId);
+    } else if (!activeChatId) {
+      setMessages([]);
+    }
+  }, [activeChatId]);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -178,32 +285,19 @@ function ChatApp() {
     chat.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const createChat = useCallback(() => {
-    const newId = Date.now().toString();
-    const newChat: ChatRow = {
-      id: newId,
-      title: `Chat ${chats.length + 1}`,
-      created_at: new Date().toISOString(),
-    };
-    setChats((prev) => [newChat, ...prev]);
-    setActiveChatId(newId);
-    setMessages([]);
+  const createChat = useCallback(async () => {
+    await createChatInBackend(`Chat ${chats.length + 1}`);
     setGlobalError(null);
-  }, [chats.length]);
+  }, [chats.length, createChatInBackend]);
 
-  const saveAsNewChat = useCallback(() => {
+  const saveAsNewChat = useCallback(async () => {
     if (messages.length === 0) return;
 
-    const newId = Date.now().toString();
-    const newChat: ChatRow = {
-      id: newId,
-      title: `Copy of ${activeChat?.title || "Chat"}`,
-      created_at: new Date().toISOString(),
-    };
-    setChats((prev) => [newChat, ...prev]);
-    setActiveChatId(newId);
-    // Keep the same messages for the new chat
-  }, [messages, chats]);
+    const activeChat = chats.find((c) => c.id === activeChatId);
+    const title = `Copy of ${activeChat?.title || "Chat"}`;
+    await createChatInBackend(title);
+    // The new chat will start empty, user can continue the conversation
+  }, [messages, chats, activeChatId, createChatInBackend]);
 
   const beginRename = useCallback((chat: ChatRow) => {
     setRenamingChatId(chat.id);
@@ -211,16 +305,35 @@ function ChatApp() {
   }, []);
 
   const submitRename = useCallback(
-    (chatId: string) => {
+    async (chatId: string) => {
       if (!renameValue.trim()) {
         setRenamingChatId(null);
         return;
       }
-      setChats((prev) =>
-        prev.map((c) =>
-          c.id === chatId ? { ...c, title: renameValue.trim() } : c,
-        ),
-      );
+
+      try {
+        const response = await fetch(`/api/chats/${chatId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ title: renameValue.trim() }),
+        });
+
+        if (response.ok) {
+          const updatedChat = await response.json();
+          setChats((prev) =>
+            prev.map((c) =>
+              c.id === chatId ? { ...c, title: updatedChat.title } : c,
+            ),
+          );
+        } else {
+          console.error("Failed to rename chat");
+        }
+      } catch (error) {
+        console.error("Error renaming chat:", error);
+      }
+      
       setRenamingChatId(null);
     },
     [renameValue],
@@ -228,29 +341,84 @@ function ChatApp() {
 
   const switchChat = useCallback((chatId: string) => {
     setActiveChatId(chatId);
-    // Simulate loading messages for different chats
-    if (chatId === "1") {
-      setMessages([
-        {
-          id: "welcome",
-          role: "assistant",
-          content: "Hello! I'm your AI assistant. How can I help you today?",
-          created_at: new Date().toISOString(),
-        },
-      ]);
-    } else {
-      setMessages([]); // Empty for new chats
-    }
     setGlobalError(null);
+    // Messages will be loaded by the useEffect hook
+  }, []);
+
+  // Delete chat via backend
+  const deleteChat = useCallback(async (chatId: string) => {
+    try {
+      const response = await fetch(`/api/chats/${chatId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setChats((prev) => prev.filter((c) => c.id !== chatId));
+        
+        // If we deleted the active chat, switch to another one or clear
+        if (chatId === activeChatId) {
+          const remainingChats = chats.filter((c) => c.id !== chatId);
+          if (remainingChats.length > 0) {
+            setActiveChatId(remainingChats[0].id);
+          } else {
+            setActiveChatId("");
+            setMessages([]);
+          }
+        }
+      } else {
+        console.error("Failed to delete chat");
+      }
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+    }
+  }, [chats, activeChatId]);
+
+  // Save user message to backend
+  const saveUserMessage = useCallback(async (chatId: string, content: string) => {
+    try {
+      const response = await fetch(`/api/chats/${chatId}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content }),
+      });
+
+      if (response.ok) {
+        const savedMessage = await response.json();
+        return savedMessage;
+      }
+    } catch (error) {
+      console.error("Error saving user message:", error);
+    }
+    return null;
   }, []);
 
   const sendMessage = async () => {
     if (
       (!input.trim() && uploadedFiles.length === 0) ||
-      !activeChatId ||
       sending
     )
       return;
+
+    let currentChatId = activeChatId;
+
+    // Create a new chat if none exists
+    if (!currentChatId) {
+      setCreatingNewChat(true);
+      const newChat = await createChatInBackend("New Chat");
+      if (!newChat) {
+        setCreatingNewChat(false);
+        return;
+      }
+      currentChatId = newChat.id;
+      setActiveChatId(newChat.id); // Set the new chat as active
+      
+      // Update the chats list
+      setChats((prevChats) => [newChat, ...prevChats]);
+      
+      setCreatingNewChat(false);
+    }
 
     setGlobalError(null);
     setSending(true);
@@ -267,17 +435,22 @@ function ChatApp() {
           : `Attached files:\n${fileList}`;
     }
 
+    // Save user message to backend first
+    const savedUserMessage = await saveUserMessage(currentChatId, messageContent);
+    
     // Add user message immediately
-    const userMsg: Msg = {
-      id: `user-${Date.now()}`,
+    const userMsg: Message = {
+      id: savedUserMessage?.id || `user-${Date.now()}`,
+      chat_id: currentChatId,
       role: "user",
       content: messageContent,
-      created_at: new Date().toISOString(),
+      created_at: savedUserMessage?.created_at || new Date().toISOString(),
     };
 
     // Add assistant placeholder for streaming
-    const assistantMsg: Msg = {
+    const assistantMsg: Message = {
       id: `assistant-${Date.now()}`,
+      chat_id: currentChatId,
       role: "assistant",
       content: "",
       created_at: new Date().toISOString(),
@@ -343,7 +516,7 @@ function ChatApp() {
           .filter((msg) => !msg._streaming && !msg._error)
           .map((msg) => ({
             id: msg.id,
-            chat_id: activeChatId,
+            chat_id: activeChatId, // Keep using activeChatId here since this uses the current chat state
             role: msg.role,
             content: msg.content,
             created_at: msg.created_at,
@@ -352,7 +525,7 @@ function ChatApp() {
         // Add the current user message
         chatMessages.push({
           id: `user-${Date.now()}`,
-          chat_id: activeChatId,
+          chat_id: activeChatId, // Keep using activeChatId here since this uses the current chat state
           role: "user",
           content: userInput,
           created_at: new Date().toISOString(),
@@ -365,12 +538,13 @@ function ChatApp() {
         });
 
         // Call the streaming API
-        const apiResponse = await fetch("/api/chat/stream", {
+        const apiResponse = await fetch("/api/chat", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            chatId: activeChatId, // Keep using activeChatId here since this uses the current chat state
             messages: chatMessages,
             temperature: 0.7,
             max_tokens: 1000,
@@ -392,9 +566,11 @@ function ChatApp() {
       }
 
       // Stream the response
+      let accumulatedContent = "";
       for await (const chunk of response.stream) {
+        accumulatedContent += chunk;
         setMessages((prev) =>
-          prev.map((m) => (m.id === messageId ? { ...m, content: chunk } : m)),
+          prev.map((m) => (m.id === messageId ? { ...m, content: accumulatedContent } : m)),
         );
       }
 
@@ -488,6 +664,15 @@ function ChatApp() {
 
   return (
     <div className="flex h-screen bg-background">
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading chats...</p>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Left Sidebar */}
       <div className="w-80 border-r border-border bg-card flex flex-col">
         {/* Sidebar Header */}
@@ -584,15 +769,7 @@ function ChatApp() {
                         if (
                           confirm("Are you sure you want to delete this chat?")
                         ) {
-                          setChats((prev) =>
-                            prev.filter((c) => c.id !== chat.id),
-                          );
-                          if (chat.id === activeChatId && chats.length > 1) {
-                            const remainingChats = chats.filter(
-                              (c) => c.id !== chat.id,
-                            );
-                            setActiveChatId(remainingChats[0]?.id || "");
-                          }
+                          deleteChat(chat.id);
                         }
                       }}
                       title="Delete chat"
@@ -907,6 +1084,8 @@ function ChatApp() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
