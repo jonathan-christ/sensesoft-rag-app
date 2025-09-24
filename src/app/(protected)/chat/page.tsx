@@ -3,20 +3,20 @@
 /**
  * BACKEND INTEGRATION GUIDE
  * ========================
- * 
+ *
  * This chat component now uses the /api/chat/stream API route for backend integration.
- * 
+ *
  * TO ENABLE REAL BACKEND:
  * 1. Set USE_REAL_BACKEND = true (line ~27)
  * 2. Ensure your streamChat function in @/features/chat/actions/stream-chat works correctly
  * 3. The API route at /app/api/chat/stream/route.ts handles the server-side streaming
  * 4. Your GOOGLE_GENAI_API_KEY is now safely accessed server-side only
- * 
+ *
  * CURRENT STATE: Using simulation for development (USE_REAL_BACKEND = false)
- * 
+ *
  * ARCHITECTURE:
  * Client (chat page) → API Route (/api/chat/stream) → streamChat function → Gemini API
- * 
+ *
  * The integration is ready - just flip the switch when your backend is complete!
  */
 
@@ -47,13 +47,13 @@ const USE_REAL_BACKEND = false; // 🔄 TOGGLE THIS TO TRUE WHEN BACKEND IS READ
 /**
  * Backend Integration Configuration
  * =================================
- * 
+ *
  * When USE_REAL_BACKEND is true, the component will:
  * - Convert UI messages to Message[] format expected by streamChat
  * - Call streamChat() with proper parameters (messages, temperature, max_tokens)
  * - Stream the response in real-time
  * - Handle errors appropriately
- * 
+ *
  * When USE_REAL_BACKEND is false:
  * - Uses simulation for frontend development
  * - Maintains the same streaming UX
@@ -63,23 +63,32 @@ const USE_REAL_BACKEND = false; // 🔄 TOGGLE THIS TO TRUE WHEN BACKEND IS READ
  * Simulates streaming response for development purposes
  * Backend developers: Remove this function when real implementation is ready
  */
-const simulateStreamingResponse = async (messageId: string, userInput: string) => {
+const simulateStreamingResponse = async (
+  messageId: string,
+  userInput: string,
+) => {
   const responses = [
     "I understand your question about ",
     "That's an interesting point. Let me think about ",
     "Based on what you've mentioned regarding ",
     "I can help you with ",
   ];
-  
-  const baseResponse = responses[Math.floor(Math.random() * responses.length)] + userInput.toLowerCase();
-  const fullResponse = baseResponse + ". Here's what I think would be most helpful for your situation.";
-  
+
+  const baseResponse =
+    responses[Math.floor(Math.random() * responses.length)] +
+    userInput.toLowerCase();
+  const fullResponse =
+    baseResponse +
+    ". Here's what I think would be most helpful for your situation.";
+
   const words = fullResponse.split(" ");
   let currentText = "";
 
   async function* streamGenerator() {
     for (let i = 0; i < words.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * 100));
+      await new Promise((resolve) =>
+        setTimeout(resolve, 100 + Math.random() * 100),
+      );
       currentText += (i > 0 ? " " : "") + words[i];
       yield currentText;
     }
@@ -87,7 +96,7 @@ const simulateStreamingResponse = async (messageId: string, userInput: string) =
 
   return {
     stream: streamGenerator(),
-    model: "simulated-model"
+    model: "simulated-model",
   };
 };
 
@@ -105,14 +114,14 @@ async function* parseSSEStream(response: Response) {
   try {
     while (true) {
       const { done, value } = await reader.read();
-      
+
       if (done) break;
-      
+
       const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
-      
+      const lines = chunk.split("\n");
+
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
+        if (line.startsWith("data: ")) {
           try {
             const data = JSON.parse(line.slice(6));
             if (data.error) {
@@ -163,8 +172,8 @@ function ChatApp() {
   }, [messages]);
 
   // Filter chats based on search query
-  const filteredChats = chats.filter(chat => 
-    chat.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredChats = chats.filter((chat) =>
+    chat.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const createChat = useCallback(() => {
@@ -182,11 +191,11 @@ function ChatApp() {
 
   const saveAsNewChat = useCallback(() => {
     if (messages.length === 0) return;
-    
+
     const newId = Date.now().toString();
     const newChat: ChatRow = {
       id: newId,
-      title: `Copy of ${activeChat?.title || 'Chat'}`,
+      title: `Copy of ${activeChat?.title || "Chat"}`,
       created_at: new Date().toISOString(),
     };
     setChats((prev) => [newChat, ...prev]);
@@ -207,12 +216,12 @@ function ChatApp() {
       }
       setChats((prev) =>
         prev.map((c) =>
-          c.id === chatId ? { ...c, title: renameValue.trim() } : c
-        )
+          c.id === chatId ? { ...c, title: renameValue.trim() } : c,
+        ),
       );
       setRenamingChatId(null);
     },
-    [renameValue]
+    [renameValue],
   );
 
   const switchChat = useCallback((chatId: string) => {
@@ -271,10 +280,12 @@ function ChatApp() {
                 _streaming: false,
                 _error: "Failed to get response. Please try again.",
               }
-            : m
-        )
+            : m,
+        ),
       );
-      setGlobalError("Connection error. Please check your internet connection.");
+      setGlobalError(
+        "Connection error. Please check your internet connection.",
+      );
     } finally {
       setSending(false);
     }
@@ -283,7 +294,7 @@ function ChatApp() {
   /**
    * Handles streaming response from the backend
    * Backend developers: This function integrates with your streamChat implementation
-   * 
+   *
    * TESTING YOUR BACKEND:
    * 1. Set USE_REAL_BACKEND = true
    * 2. Send a message in the chat
@@ -291,15 +302,18 @@ function ChatApp() {
    * 4. Ensure the response streams properly (word by word)
    * 5. Check error handling works if streamChat fails
    */
-  const handleStreamingResponse = async (messageId: string, userInput: string) => {
+  const handleStreamingResponse = async (
+    messageId: string,
+    userInput: string,
+  ) => {
     try {
       let response;
 
       if (USE_REAL_BACKEND) {
         // Convert current messages to the format expected by streamChat
         const chatMessages: Message[] = messages
-          .filter(msg => !msg._streaming && !msg._error)
-          .map(msg => ({
+          .filter((msg) => !msg._streaming && !msg._error)
+          .map((msg) => ({
             id: msg.id,
             chat_id: activeChatId,
             role: msg.role,
@@ -317,11 +331,11 @@ function ChatApp() {
         });
 
         // Call the real backend via API route
-        console.log("🔄 Calling /api/chat/stream with:", { 
-          messageCount: chatMessages.length, 
-          lastMessage: chatMessages[chatMessages.length - 1]?.content 
+        console.log("🔄 Calling /api/chat/stream with:", {
+          messageCount: chatMessages.length,
+          lastMessage: chatMessages[chatMessages.length - 1]?.content,
         });
-        
+
         // Call the streaming API
         const apiResponse = await fetch("/api/chat/stream", {
           method: "POST",
@@ -342,7 +356,7 @@ function ChatApp() {
         // Create a response object that matches the expected interface
         response = {
           stream: parseSSEStream(apiResponse),
-          model: "gemini-2.5-flash"
+          model: "gemini-2.5-flash",
         };
       } else {
         // Use simulation for development
@@ -352,66 +366,69 @@ function ChatApp() {
       // Stream the response
       for await (const chunk of response.stream) {
         setMessages((prev) =>
-          prev.map((m) =>
-            m.id === messageId ? { ...m, content: chunk } : m
-          )
+          prev.map((m) => (m.id === messageId ? { ...m, content: chunk } : m)),
         );
       }
 
       // Mark streaming as complete
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === messageId ? { ...m, _streaming: false } : m
-        )
+        prev.map((m) => (m.id === messageId ? { ...m, _streaming: false } : m)),
       );
     } catch (error) {
       throw error; // Re-throw to be handled by the calling function
     }
   };
 
-  const retryMessage = useCallback((messageId: string) => {
-    const message = messages.find(m => m.id === messageId);
-    if (!message?._error) return;
+  const retryMessage = useCallback(
+    (messageId: string) => {
+      const message = messages.find((m) => m.id === messageId);
+      if (!message?._error) return;
 
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === messageId
-          ? { ...m, _error: undefined, _streaming: true, content: "" }
-          : m
-      )
-    );
-
-    handleStreamingResponse(messageId, "retry request").catch(() => {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === messageId
-            ? { ...m, _streaming: false, _error: "Retry failed" }
-            : m
-        )
+            ? { ...m, _error: undefined, _streaming: true, content: "" }
+            : m,
+        ),
       );
-    });
-  }, [messages]);
+
+      handleStreamingResponse(messageId, "retry request").catch(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId
+              ? { ...m, _streaming: false, _error: "Retry failed" }
+              : m,
+          ),
+        );
+      });
+    },
+    [messages],
+  );
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey) {
         switch (e.key) {
-          case 'n':
+          case "n":
             e.preventDefault();
             createChat();
             break;
-          case 'k':
+          case "k":
             e.preventDefault();
-            setSearchQuery('');
-            document.querySelector<HTMLInputElement>('[placeholder="Search chats..."]')?.focus();
+            setSearchQuery("");
+            document
+              .querySelector<HTMLInputElement>(
+                '[placeholder="Search chats..."]',
+              )
+              ?.focus();
             break;
         }
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [createChat]);
 
   const activeChat = chats.find((c) => c.id === activeChatId);
@@ -434,7 +451,7 @@ function ChatApp() {
               + New
             </Button>
           </div>
-          
+
           {/* Search Input */}
           <div className="relative">
             <Input
@@ -511,11 +528,17 @@ function ChatApp() {
                       className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-destructive"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm('Are you sure you want to delete this chat?')) {
-                          setChats(prev => prev.filter(c => c.id !== chat.id));
+                        if (
+                          confirm("Are you sure you want to delete this chat?")
+                        ) {
+                          setChats((prev) =>
+                            prev.filter((c) => c.id !== chat.id),
+                          );
                           if (chat.id === activeChatId && chats.length > 1) {
-                            const remainingChats = chats.filter(c => c.id !== chat.id);
-                            setActiveChatId(remainingChats[0]?.id || '');
+                            const remainingChats = chats.filter(
+                              (c) => c.id !== chat.id,
+                            );
+                            setActiveChatId(remainingChats[0]?.id || "");
                           }
                         }
                       }}
@@ -528,13 +551,13 @@ function ChatApp() {
               )}
             </div>
           ))}
-          
+
           {filteredChats.length === 0 && searchQuery && (
             <div className="text-center text-muted-foreground text-sm p-4">
               No chats found matching &quot;{searchQuery}&quot;
             </div>
           )}
-          
+
           {chats.length === 0 && !searchQuery && (
             <div className="text-center text-muted-foreground text-sm p-4">
               No chats yet. Create your first chat!
@@ -559,7 +582,7 @@ function ChatApp() {
                 </div>
               )}
             </div>
-            
+
             {/* Chat Actions */}
             <div className="flex items-center gap-2">
               {messages.length > 0 && (
@@ -588,102 +611,117 @@ function ChatApp() {
         {/* Messages Area */}
         <div className="flex-1 flex">
           {/* Main Messages Panel */}
-          <div className={`flex-1 flex flex-col ${showCitations ? 'border-r border-border' : ''}`}>
+          <div
+            className={`flex-1 flex flex-col ${showCitations ? "border-r border-border" : ""}`}
+          >
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {!activeChat ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center text-muted-foreground">
-                <div className="text-lg mb-2">Welcome to AI Chat</div>
-                <div className="text-sm">Create a new chat or select an existing one to begin</div>
-              </div>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center text-muted-foreground">
-                <div className="text-lg mb-2">Start a conversation</div>
-                <div className="text-sm">Type your message below to begin chatting</div>
-              </div>
-            </div>
-          ) : (
-            messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <Card
-                  className={`max-w-[80%] ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : msg._error
-                      ? "bg-destructive/10 border-destructive/30"
-                      : "bg-muted"
-                  }`}
-                >
-                  <CardContent className="p-4">
-                    {msg._error ? (
-                      <div className="space-y-2">
-                        <div className="text-destructive text-sm font-medium">
-                          ⚠️ {msg._error}
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => retryMessage(msg.id)}
-                          className="h-7 px-3 text-xs"
-                        >
-                          Retry
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="text-sm whitespace-pre-wrap">
-                        {msg.content}
-                        {msg._streaming && (
-                          <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1">
-                            |
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    
-                    <div className="text-xs opacity-70 mt-2">
-                      {new Date(msg.created_at).toLocaleTimeString()}
+              {!activeChat ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-muted-foreground">
+                    <div className="text-lg mb-2">Welcome to AI Chat</div>
+                    <div className="text-sm">
+                      Create a new chat or select an existing one to begin
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
-            ))
-          )}
-          <div ref={bottomRef} />
+                  </div>
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-muted-foreground">
+                    <div className="text-lg mb-2">Start a conversation</div>
+                    <div className="text-sm">
+                      Type your message below to begin chatting
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${
+                      msg.role === "user" ? "justify-end" : "justify-start"
+                    }`}
+                  >
+                    <Card
+                      className={`max-w-[80%] ${
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : msg._error
+                            ? "bg-destructive/10 border-destructive/30"
+                            : "bg-muted"
+                      }`}
+                    >
+                      <CardContent className="p-4">
+                        {msg._error ? (
+                          <div className="space-y-2">
+                            <div className="text-destructive text-sm font-medium">
+                              ⚠️ {msg._error}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => retryMessage(msg.id)}
+                              className="h-7 px-3 text-xs"
+                            >
+                              Retry
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="text-sm whitespace-pre-wrap">
+                            {msg.content}
+                            {msg._streaming && (
+                              <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1">
+                                |
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="text-xs opacity-70 mt-2">
+                          {new Date(msg.created_at).toLocaleTimeString()}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ))
+              )}
+              <div ref={bottomRef} />
             </div>
           </div>
 
           {/* Source Citations Panel */}
           {showCitations && (
             <div className="w-80 bg-card p-4 overflow-y-auto">
-              <h3 className="font-semibold text-sm mb-3">Sources & Citations</h3>
+              <h3 className="font-semibold text-sm mb-3">
+                Sources & Citations
+              </h3>
               <div className="space-y-3">
                 <div className="p-3 rounded-lg bg-muted/50 border">
-                  <div className="font-medium text-sm mb-1">Knowledge Base Document</div>
+                  <div className="font-medium text-sm mb-1">
+                    Knowledge Base Document
+                  </div>
                   <div className="text-xs text-muted-foreground mb-2">
                     Last updated: {new Date().toLocaleDateString()}
                   </div>
                   <div className="text-sm">
-                    This information was retrieved from your uploaded documents and knowledge base.
+                    This information was retrieved from your uploaded documents
+                    and knowledge base.
                   </div>
                 </div>
-                
+
                 <div className="p-3 rounded-lg bg-muted/50 border">
-                  <div className="font-medium text-sm mb-1">AI Model Response</div>
+                  <div className="font-medium text-sm mb-1">
+                    AI Model Response
+                  </div>
                   <div className="text-xs text-muted-foreground mb-2">
-                    Generated by: {USE_REAL_BACKEND ? 'Gemini API' : 'Simulation'}
+                    Generated by:{" "}
+                    {USE_REAL_BACKEND ? "Gemini API" : "Simulation"}
                   </div>
                   <div className="text-sm">
-                    Response generated based on conversation context and available knowledge.
+                    Response generated based on conversation context and
+                    available knowledge.
                   </div>
                 </div>
-                
+
                 {messages.length === 0 && (
                   <div className="text-center text-muted-foreground text-sm p-4">
                     Sources will appear here when you start chatting
@@ -755,12 +793,10 @@ function ChatApp() {
               )}
             </Button>
           </form>
-          
+
           <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
             <span>Press Enter to send, Shift+Enter for new line</span>
-            {input.length > 0 && (
-              <span>{input.length} characters</span>
-            )}
+            {input.length > 0 && <span>{input.length} characters</span>}
           </div>
         </div>
       </div>

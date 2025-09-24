@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
             const data = `data: ${JSON.stringify({ content: chunk, done: false })}\n\n`;
             controller.enqueue(new TextEncoder().encode(data));
           }
-          
+
           // Send completion signal
           const doneData = `data: ${JSON.stringify({ content: "", done: true })}\n\n`;
           controller.enqueue(new TextEncoder().encode(doneData));
@@ -39,14 +39,14 @@ export async function POST(request: NextRequest) {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
+        Connection: "keep-alive",
       },
     });
   } catch (error) {
     console.error("API error:", error);
     return Response.json(
       { error: "Failed to process chat request" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
