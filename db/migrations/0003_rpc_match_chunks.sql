@@ -1,13 +1,13 @@
 -- db/migrations/0003_rpc_match_chunks.sql
 -- RPC to retrieve nearest chunks for the authenticated user.
--- Ensure the dimension (vector(1536)) matches public.chunks.embedding.
+-- Ensure the dimension (vector(768)) matches public.chunks.embedding.
 
 drop function if exists public.match_chunks(double precision[], int, float);
 
 drop function if exists public.match_chunks(vector, int, float);
 
 create or replace function public.match_chunks(
-  query_embedding double precision[],
+  query_embedding vector(768),
   match_count int,
   min_similarity float
 )
@@ -22,7 +22,7 @@ language sql
 stable
 set search_path = public
 as $$
-  with qe as (select $1::vector(1536) v)
+  with qe as (select $1 v)
   select
     c.id as chunk_id,
     c.content,

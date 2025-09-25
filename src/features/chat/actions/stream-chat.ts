@@ -76,7 +76,11 @@ export async function streamChat(
 
   async function* streamGenerator() {
     for await (const chunk of stream) {
-      yield typeof chunk === "string" ? chunk : (chunk as Buffer).toString();
+      if (typeof chunk === "string") {
+        yield chunk;
+      } else {
+        yield Buffer.from(chunk).toString();
+      }
     }
   }
 

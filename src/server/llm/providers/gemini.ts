@@ -1,10 +1,14 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  GoogleGenerativeAI,
+  TaskType,
+} from "@google/generative-ai";
 
 import type { Message } from "@/lib/types";
 
 import {
   CHAT_MODEL,
   EMBEDDING_MODEL,
+  EMBEDDING_DIM,
   GOOGLE_GENAI_API_KEY,
 } from "../../config";
 import type { ChatStreamOptions, EmbedOptions } from "../types";
@@ -70,8 +74,23 @@ export async function streamChat(opts: ChatStreamOptions): Promise<void> {
 
 export async function embed(opts: EmbedOptions): Promise<number[][]> {
   const { input } = opts;
+  const textInput = Array.isArray(input) ? input.join("\n\n") : input;
   const model = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
 
-  const result = await model.embedContent(input);
-  return [result.embedding.values];
+  const result = await model.embedContent({
+    content: {
+      role: "user",
+      parts: [{ text: textInput }],
+    },
+    taskType: TaskType.SEMANTIC_SIMILARITY,
+  });
+
+  const values = result.embedding?.values ?? [];
+  if (values.length !== EMBEDDING_DIM) {
+    throw new Error(
+      `Gemini embedding dimension mismatch: expected ${EMBEDDING_DIM}, got ${values.length}. Check EMBEDDING_MODEL or EMBEDDING_DIM configuration.`,
+    );
+  }
+
+  return [values];
 }
