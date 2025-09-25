@@ -70,7 +70,7 @@ export async function POST(request: Request) {
           filename: file.name,
           mime_type: file.type,
           size_bytes: file.size,
-          status: "uploaded",
+          status: "pending",
           meta: {
             storage_path: uploadData.path,
             job_id: jobId,
@@ -107,10 +107,10 @@ export async function POST(request: Request) {
           `Error parsing document ${file.name || "unknown_file"}:`,
           parseError,
         );
-        // Update document status to failed if parsing fails
+        // Update document status to error if parsing fails
         await supabase
           .from("documents")
-          .update({ status: "failed" })
+          .update({ status: "error" })
           .eq("id", documentId);
         continue; // Continue to next file
       }
@@ -157,10 +157,10 @@ export async function POST(request: Request) {
             `Error upserting chunks for document ${documentId}:`,
             upsertError,
           );
-          // Update document status to failed if upserting fails
+          // Update document status to error if upserting fails
           await supabase
             .from("documents")
-            .update({ status: "failed" })
+            .update({ status: "error" })
             .eq("id", documentId);
           continue; // Continue to next file
         }
