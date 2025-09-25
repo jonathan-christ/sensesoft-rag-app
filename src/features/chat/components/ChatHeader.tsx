@@ -9,7 +9,14 @@ export function ChatHeader(props: {
   showCitations: boolean;
   toggleCitations: () => void;
 }) {
-  const { title, sending, messagesCount, onSaveAsNew, showCitations, toggleCitations } = props;
+  const {
+    title,
+    sending,
+    messagesCount,
+    onSaveAsNew,
+    showCitations,
+    toggleCitations,
+  } = props;
   return (
     <div className="border-b border-border p-4 bg-card sticky top-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
       <div className="flex items-center justify-between">
@@ -24,9 +31,21 @@ export function ChatHeader(props: {
         </div>
         <div className="flex items-center gap-2">
           {messagesCount > 0 && (
-            <Button variant="outline" size="sm" onClick={onSaveAsNew} className="h-8 px-3">Save as New</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSaveAsNew}
+              className="h-8 px-3"
+            >
+              Save as New
+            </Button>
           )}
-          <Button variant="outline" size="sm" onClick={toggleCitations} className="h-8 px-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleCitations}
+            className="h-8 px-3"
+          >
             {showCitations ? "Hide Sources" : "Show Sources"}
           </Button>
         </div>

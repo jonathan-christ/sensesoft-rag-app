@@ -13,11 +13,37 @@ export function ChatInput(props: {
   const { input, setInput, activeChatPresent, sending, onSubmit } = props;
   return (
     <div className="border-t border-border p-4 bg-card sticky bottom-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="flex gap-3">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit();
+        }}
+        className="flex gap-3"
+      >
         <div className="flex-1">
-          <Input placeholder={activeChatPresent ? "Type your message..." : "Create or select a chat first"} value={input} onChange={(e) => setInput(e.target.value)} disabled={!activeChatPresent || sending} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !sending) { e.preventDefault(); onSubmit(); } }} className="h-12 text-base" />
+          <Input
+            placeholder={
+              activeChatPresent
+                ? "Type your message..."
+                : "Create or select a chat first"
+            }
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            disabled={!activeChatPresent || sending}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && !sending) {
+                e.preventDefault();
+                onSubmit();
+              }
+            }}
+            className="h-12 text-base"
+          />
         </div>
-        <Button type="submit" disabled={!activeChatPresent || !input.trim() || sending} className="h-12 px-6">
+        <Button
+          type="submit"
+          disabled={!activeChatPresent || !input.trim() || sending}
+          className="h-12 px-6"
+        >
           {sending ? (
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />

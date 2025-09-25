@@ -64,24 +64,39 @@ function ChatAppInner({ initialChatId }: { initialChatId?: string }) {
             />
 
             <div className="flex-1 flex min-h-0">
-              <div className={`flex-1 flex flex-col min-h-0 ${ctx.showCitations ? "border-r border-border" : ""}`}>
+              <div
+                className={`flex-1 flex flex-col min-h-0 ${ctx.showCitations ? "border-r border-border" : ""}`}
+              >
                 {!ctx.activeChat ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center text-muted-foreground">
                       <div className="text-lg mb-2">Welcome to AI Chat</div>
-                      <div className="text-sm">Create a new chat or select an existing one to begin</div>
+                      <div className="text-sm">
+                        Create a new chat or select an existing one to begin
+                      </div>
                     </div>
                   </div>
                 ) : (
-                  <MessagesPanel messages={ctx.messages} retryMessage={ctx.retryMessage} bottomRef={ctx.bottomRef} />
+                  <MessagesPanel
+                    messages={ctx.messages}
+                    retryMessage={ctx.retryMessage}
+                    bottomRef={ctx.bottomRef}
+                  />
                 )}
               </div>
 
-              <CitationsPanel show={ctx.showCitations} messagesLength={ctx.messages.length} backendLabel={"Gemini API"} />
+              <CitationsPanel
+                show={ctx.showCitations}
+                messagesLength={ctx.messages.length}
+                backendLabel={"Gemini API"}
+              />
             </div>
 
             {ctx.globalError && (
-              <GlobalErrorBanner message={ctx.globalError} onClose={() => ctx.setGlobalError(null)} />
+              <GlobalErrorBanner
+                message={ctx.globalError}
+                onClose={() => ctx.setGlobalError(null)}
+              />
             )}
 
             <ChatInput
