@@ -17,6 +17,12 @@
 /.next/
 /out/
 
+# supabase cli artifacts
+/supabase/.branches/
+/supabase/.remote/
+/supabase/.temp/
+/.supabase/
+
 # production
 /build
 
