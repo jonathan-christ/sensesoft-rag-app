@@ -5,7 +5,10 @@ import { storeEmbeddings } from "@/server/vector/pg";
 import { parsePdf } from "@/server/parser/pdf";
 import { chunkText } from "@/server/rag/chunker";
 
-async function parseDocument(fileContent: Buffer, mimeType: string): Promise<string> {
+async function parseDocument(
+  fileContent: Buffer,
+  mimeType: string,
+): Promise<string> {
   if (mimeType === "application/pdf") {
     return parsePdf(fileContent);
   } else if (
@@ -60,17 +63,21 @@ export async function POST(request: Request) {
       const jobId = crypto.randomUUID(); // Generate a job ID for each file
 
       // Insert document metadata into the database
-      const { data: documentInsertData, error: insertError } = await supabase.from("documents").insert({
-        user_id: user.id,
-        filename: file.name,
-        mime_type: file.type,
-        size_bytes: file.size,
-        status: "uploaded",
-        meta: {
-          storage_path: uploadData.path,
-          job_id: jobId,
-        },
-      }).select().single(); // Select the inserted document to get its ID
+      const { data: documentInsertData, error: insertError } = await supabase
+        .from("documents")
+        .insert({
+          user_id: user.id,
+          filename: file.name,
+          mime_type: file.type,
+          size_bytes: file.size,
+          status: "uploaded",
+          meta: {
+            storage_path: uploadData.path,
+            job_id: jobId,
+          },
+        })
+        .select()
+        .single(); // Select the inserted document to get its ID
 
       if (insertError || !documentInsertData) {
         console.error(
@@ -91,17 +98,28 @@ export async function POST(request: Request) {
       // 3. Parse the document
       let parsedText: string;
       try {
-        parsedText = await parseDocument(fileContent, file.type || 'unknown_file');
+        parsedText = await parseDocument(
+          fileContent,
+          file.type || "unknown_file",
+        );
       } catch (parseError) {
-        console.error(`Error parsing document ${file.name || 'unknown_file'}:`, parseError);
+        console.error(
+          `Error parsing document ${file.name || "unknown_file"}:`,
+          parseError,
+        );
         // Update document status to failed if parsing fails
-        await supabase.from("documents").update({ status: "failed" }).eq("id", documentId);
+        await supabase
+          .from("documents")
+          .update({ status: "failed" })
+          .eq("id", documentId);
         continue; // Continue to next file
       }
 
       // 4. Chunk the parsed content
       const chunks = chunkText(parsedText);
-      console.log(`Generated ${chunks.length} chunks for document ${file.name || 'unknown_file'}`);
+      console.log(
+        `Generated ${chunks.length} chunks for document ${file.name || "unknown_file"}`,
+      );
 
       // 5. Generate embeddings for each chunk
       const embeddings: number[][] = [];
@@ -116,7 +134,7 @@ export async function POST(request: Request) {
         embeddings.push(embedding);
         chunkContents.push(chunk);
         chunkMetas.push({
-          filename: file.name || 'unknown_file',
+          filename: file.name || "unknown_file",
           mime_type: file.type,
           model,
           dimensions,
@@ -135,9 +153,15 @@ export async function POST(request: Request) {
             chunkMetas,
           );
         } catch (upsertError) {
-          console.error(`Error upserting chunks for document ${documentId}:`, upsertError);
+          console.error(
+            `Error upserting chunks for document ${documentId}:`,
+            upsertError,
+          );
           // Update document status to failed if upserting fails
-          await supabase.from("documents").update({ status: "failed" }).eq("id", documentId);
+          await supabase
+            .from("documents")
+            .update({ status: "failed" })
+            .eq("id", documentId);
           continue; // Continue to next file
         }
       } else {
