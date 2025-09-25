@@ -2,7 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Home, MessageSquare, FileText, LogIn, LogOut, UserPlus, User } from "lucide-react";
 import { Button } from "@/features/shared/components/ui/button";
 import { createClient } from "@/features/auth/lib/supabase/client";
@@ -10,6 +10,7 @@ import { createClient } from "@/features/auth/lib/supabase/client";
 export default function SidebarShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -17,15 +18,20 @@ export default function SidebarShell({ children }: { children: React.ReactNode }
     let mounted = true;
     (async () => {
       try {
-        const supabase = createClient();
         const { data } = await supabase.auth.getUser();
         if (mounted) setAuthEmail(data.user?.email ?? null);
       } finally {
         if (mounted) setAuthLoading(false);
       }
     })();
-    return () => { mounted = false; };
-  }, []);
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthEmail(session?.user?.email ?? null);
+    });
+    return () => {
+      mounted = false;
+      listener?.subscription.unsubscribe();
+    };
+  }, [supabase]);
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
   const inScope = pathname === "/" || pathname.startsWith("/chat") || pathname.startsWith("/docs");
@@ -55,7 +61,6 @@ export default function SidebarShell({ children }: { children: React.ReactNode }
           email={authEmail}
           loading={authLoading}
           onLogout={async () => {
-            const supabase = createClient();
             await supabase.auth.signOut();
             router.push("/login");
           }}

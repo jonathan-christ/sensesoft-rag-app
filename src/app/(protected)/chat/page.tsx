@@ -9,8 +9,8 @@ import { GlobalErrorBanner } from "@/features/chat/components/GlobalErrorBanner"
 import { ChatInput } from "@/features/chat/components/ChatInput";
 import { useRouter, useSearchParams } from "next/navigation";
 
-function ChatApp() {
-  const ctx = useChatApp();
+function ChatAppInner({ initialChatId }: { initialChatId?: string }) {
+  const ctx = useChatApp(initialChatId);
   const router = useRouter();
   const searchParams = useSearchParams();
   const sentInitial = useRef(false);
@@ -89,11 +89,6 @@ function ChatApp() {
               setInput={ctx.setInput}
               activeChatPresent={!!ctx.activeChat}
               sending={ctx.sending}
-              uploadedFiles={ctx.uploadedFiles}
-              fileInputRef={ctx.fileInputRef}
-              triggerFileInput={ctx.triggerFileInput}
-              handleFileSelect={ctx.handleFileSelect}
-              removeFile={ctx.removeFile}
               onSubmit={ctx.sendMessage}
             />
           </div>
@@ -103,6 +98,6 @@ function ChatApp() {
   );
 }
 
-export default function ChatPage() {
-  return <ChatApp />;
+export default function ChatApp(props: { initialChatId?: string }) {
+  return <ChatAppInner initialChatId={props.initialChatId} />;
 }

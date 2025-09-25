@@ -53,11 +53,9 @@ export function useChatApp(initialChatId?: string) {
   const [renameValue, setRenameValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCitations, setShowCitations] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingNewChat, setCreatingNewChat] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Load chats from backend
   const loadChats = useCallback(async () => {
@@ -285,7 +283,7 @@ export function useChatApp(initialChatId?: string) {
   }, [messages, activeChatId]);
 
   const sendMessage = useCallback(async () => {
-    if ((!input.trim() && uploadedFiles.length === 0) || sending) return;
+    if (!input.trim() || sending) return;
     let currentChatId = activeChatId;
     if (!currentChatId) {
       setCreatingNewChat(true);
@@ -298,11 +296,7 @@ export function useChatApp(initialChatId?: string) {
     }
     setGlobalError(null);
     setSending(true);
-    let messageContent = input;
-    if (uploadedFiles.length > 0) {
-      const fileList = uploadedFiles.map((f) => `📄 ${f.name} (${(f.size / 1024).toFixed(1)} KB)`).join("\n");
-      messageContent = input.trim() ? `${input}\n\nAttached files:\n${fileList}` : `Attached files:\n${fileList}`;
-    }
+    const messageContent = input;
     const saved = await saveUserMessage(currentChatId, messageContent);
     const userMsg: Message = { id: saved?.id || `user-${Date.now()}`,
       chat_id: currentChatId, role: "user", content: messageContent, created_at: saved?.created_at || new Date().toISOString() };
@@ -310,7 +304,6 @@ export function useChatApp(initialChatId?: string) {
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
     const currentInput = input;
     setInput("");
-    setUploadedFiles([]);
     try {
       await handleStreamingResponse(assistantMsg.id, currentInput);
     } catch (error) {
@@ -319,7 +312,7 @@ export function useChatApp(initialChatId?: string) {
     } finally {
       setSending(false);
     }
-  }, [input, uploadedFiles, sending, activeChatId, saveUserMessage, handleStreamingResponse]);
+  }, [input, sending, activeChatId, saveUserMessage, handleStreamingResponse]);
 
   const retryMessage = useCallback((messageId: string) => {
     const message = messages.find((m) => m.id === messageId);
@@ -330,34 +323,17 @@ export function useChatApp(initialChatId?: string) {
     });
   }, [messages, handleStreamingResponse]);
 
-  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-      const newFiles = Array.from(files);
-      setUploadedFiles((prev) => [...prev, ...newFiles]);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  }, []);
-
-  const removeFile = useCallback((index: number) => {
-    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const triggerFileInput = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
   const activeChat = useMemo(() => chats.find((c) => c.id === activeChatId), [chats, activeChatId]);
 
   return {
     // state
     chats, activeChatId, messages, input, sending, globalError, renamingChatId, renameValue,
-    searchQuery, showCitations, uploadedFiles, loading, creatingNewChat,
-    bottomRef, fileInputRef, filteredChats, activeChat,
+    searchQuery, showCitations, loading, creatingNewChat,
+    bottomRef, filteredChats, activeChat,
     // setters
     setInput, setSearchQuery, setRenameValue, setShowCitations, setGlobalError,
     // actions
     beginRename, submitRename, switchChat, deleteChat, createChat, saveAsNewChat,
-    retryMessage, handleFileSelect, removeFile, triggerFileInput, sendMessage,
+    retryMessage, sendMessage,
   } as const;
 }
