@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChatApp } from "../chat/page";
+import ChatApp from "../chat/page";
 
 interface ChatPageProps {
   params: {
