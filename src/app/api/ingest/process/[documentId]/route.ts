@@ -76,7 +76,8 @@ export async function POST(
       );
     }
 
-    const storagePath = (document.meta as any)?.storage_path;
+    const meta = document.meta as { storage_path?: string } | null;
+    const storagePath = meta?.storage_path;
     if (!storagePath) {
       return NextResponse.json(
         { error: "Document storage path not found" },
