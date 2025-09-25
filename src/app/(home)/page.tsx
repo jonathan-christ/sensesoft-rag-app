@@ -14,12 +14,6 @@ export default async function Home() {
       <div className="w-full flex flex-row justify-end gap-3">
         {data ? (
           <>
-            <Link
-              className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-primary text-primary-foreground gap-2 hover:bg-primary/90 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-              href="/chat"
-            >
-              Open Chat
-            </Link>
             <LogoutButton />
           </>
         ) : (
