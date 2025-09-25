@@ -136,9 +136,16 @@ async function* parseSSEStream(response: Response) {
   }
 }
 
-function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
+function ChatApp({
+  initialChatId,
+  initialMessage,
+}: {
+  initialChatId?: string;
+  initialMessage?: string;
+} = {}) {
   // Helper: safely lowercase strings (returns empty string for null/undefined)
-  const safeLower = (v: unknown) => (typeof v === "string" ? v.toLowerCase() : "");
+  const safeLower = (v: unknown) =>
+    typeof v === "string" ? v.toLowerCase() : "";
   const [chats, setChats] = useState<ChatRow[]>([]);
   const [activeChatId, setActiveChatId] = useState<string>(initialChatId || "");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -283,6 +290,13 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Handle initial message from URL params
+  useEffect(() => {
+    if (initialMessage && !input) {
+      setInput(initialMessage);
+    }
+  }, [initialMessage]);
 
   // Filter chats based on search query (defensive against nulls)
   const query = safeLower(searchQuery);
@@ -818,7 +832,9 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <h1 className="font-semibold text-lg">
-                    {activeChat ? activeChat.title || "Untitled chat" : "Select a chat"}
+                    {activeChat
+                      ? activeChat.title || "Untitled chat"
+                      : "Select a chat"}
                   </h1>
                   {sending && (
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -1109,6 +1125,10 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
 
 export { ChatApp };
 
-export default function ChatPage() {
-  return <ChatApp />;
+export default function ChatPage({
+  searchParams,
+}: {
+  searchParams: { message?: string };
+}) {
+  return <ChatApp initialMessage={searchParams.message} />;
 }
