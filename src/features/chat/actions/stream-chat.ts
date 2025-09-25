@@ -46,18 +46,15 @@ export async function streamChat(
       },
       onFinal: async (finalText: string) => {
         const messageContent = finalText || fullResponse;
-        sendEvent({
-          type: "final",
-          message: { role: "assistant", content: messageContent },
-        });
 
         if (chatId) {
           try {
             const supabase = await createClient();
-            const { error } = await supabase.from("messages").insert([
-              { chat_id: chatId, role: "user", content: userQuery },
-              { chat_id: chatId, role: "assistant", content: messageContent },
-            ]);
+            const { error } = await supabase
+              .from("messages")
+              .insert([
+                { chat_id: chatId, role: "assistant", content: messageContent },
+              ]);
             if (error) {
               console.error("Error saving messages:", error);
             }

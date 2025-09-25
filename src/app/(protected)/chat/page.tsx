@@ -683,9 +683,9 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
       ) : (
         <>
           {/* Left Sidebar */}
-          <div className="w-80 border-r border-border bg-card flex flex-col">
+          <div className="w-80 border-r border-border bg-card flex flex-col sticky top-0 h-screen min-h-0">
             {/* Sidebar Header */}
-            <div className="p-4 border-b border-border">
+            <div className="p-4 border-b border-border sticky top-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Chats</h2>
                 <Button
@@ -808,9 +808,9 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
           </div>
 
           {/* Main Chat Area */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
             {/* Chat Header */}
-            <div className="border-b border-border p-4 bg-card">
+            <div className="border-b border-border p-4 bg-card sticky top-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <h1 className="font-semibold text-lg">
@@ -850,12 +850,12 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 flex">
+            <div className="flex-1 flex min-h-0">
               {/* Main Messages Panel */}
               <div
-                className={`flex-1 flex flex-col ${showCitations ? "border-r border-border" : ""}`}
+                className={`flex-1 flex flex-col min-h-0 ${showCitations ? "border-r border-border" : ""}`}
               >
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-36">
                   {!activeChat ? (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center text-muted-foreground">
@@ -992,7 +992,7 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
             )}
 
             {/* Input Area */}
-            <div className="border-t border-border p-4 bg-card">
+            <div className="border-t border-border p-4 bg-card sticky bottom-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
               {/* Show uploaded files */}
               {uploadedFiles.length > 0 && (
                 <div className="mb-3 space-y-2">
