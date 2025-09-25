@@ -95,6 +95,18 @@ export async function POST(request: Request) {
       const fileBuffer = await file.arrayBuffer(); // Use the original file buffer
       const fileContent = Buffer.from(fileBuffer);
 
+      const { error: processingStatusError } = await supabase
+        .from("documents")
+        .update({ status: "processing" })
+        .eq("id", documentId);
+
+      if (processingStatusError) {
+        console.error(
+          `Error updating document ${documentId} to processing:`,
+          processingStatusError,
+        );
+      }
+
       // 3. Parse the document
       let parsedText: string;
       try {
