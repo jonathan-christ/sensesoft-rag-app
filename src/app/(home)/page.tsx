@@ -16,7 +16,12 @@ export default async function Home() {
   } = await supabase.auth.getUser();
 
   // Load the user's recent chats
-  let chats: Array<{ id: string; title: string | null; created_at: string; updated_at: string }> = [];
+  let chats: Array<{
+    id: string;
+    title: string | null;
+    created_at: string;
+    updated_at: string;
+  }> = [];
   if (user) {
     const { data: userChats } = await supabase
       .from("chats")
@@ -52,7 +57,7 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex">
       {/* Sidebar */}
-  <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm sticky top-0 h-screen min-h-0">
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm sticky top-0 h-screen min-h-0">
         {/* Logo */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center space-x-3">
@@ -71,7 +76,10 @@ export default async function Home() {
         <div className="p-4">
           {user ? (
             <form action={createNewChat}>
-              <Button type="submit" className="w-full bg-[#ffb81c] text-white hover:bg-[#ffb81c]/90 font-medium">
+              <Button
+                type="submit"
+                className="w-full bg-[#ffb81c] text-white hover:bg-[#ffb81c]/90 font-medium"
+              >
                 <MessageSquare className="w-4 h-4 mr-2" />
                 New Chat
               </Button>
@@ -97,20 +105,24 @@ export default async function Home() {
                 chats.map((chat) => (
                   <Link
                     key={chat.id}
-                    href={`/${chat.id}`}
+                    href={`/$chat`}
                     className="block p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors group"
                   >
                     <div className="text-sm font-medium text-gray-900 mb-1 line-clamp-1">
                       {chat.title || "Untitled chat"}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {new Date(chat.updated_at || chat.created_at).toLocaleDateString()}
+                      {new Date(
+                        chat.updated_at || chat.created_at,
+                      ).toLocaleDateString()}
                     </div>
                   </Link>
                 ))
               ) : (
                 <div className="text-xs text-gray-500">
-                  {user ? "No chats yet. Start a new conversation!" : "Login to see your recent chats."}
+                  {user
+                    ? "No chats yet. Start a new conversation!"
+                    : "Login to see your recent chats."}
                 </div>
               )}
             </div>
@@ -121,28 +133,31 @@ export default async function Home() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
         {/* Header */}
-  <header className="p-4 border-b border-gray-200 bg-white shadow-sm sticky top-0 z-10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/75">
+        <header className="p-4 border-b border-gray-200 bg-white shadow-sm sticky top-0 z-10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/75">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">Akkodis AI Assistant</h1>
+              <h1 className="text-lg font-semibold text-gray-900">
+                Akkodis AI Assistant
+              </h1>
               <div className="text-sm text-gray-600">
                 Ask questions about your documents
               </div>
             </div>
-            
+
             {/* Auth buttons moved to top right */}
             <div className="flex items-center space-x-3">
               {user ? (
                 <div className="flex items-center space-x-4">
-                  <span className="text-gray-600 text-sm">
-                    Welcome back!
-                  </span>
+                  <span className="text-gray-600 text-sm">Welcome back!</span>
                   <LogoutButton />
                 </div>
               ) : (
                 <>
                   <Link href="/login">
-                    <Button variant="ghost" className="text-gray-700 hover:bg-gray-100">
+                    <Button
+                      variant="ghost"
+                      className="text-gray-700 hover:bg-gray-100"
+                    >
                       Login
                     </Button>
                   </Link>
@@ -165,9 +180,12 @@ export default async function Home() {
               <div className="w-16 h-16 bg-[#ffb81c] rounded-full flex items-center justify-center mx-auto">
                 <MessageSquare className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-3xl font-bold text-gray-900">Welcome to Akkodis AI</h2>
+              <h2 className="text-3xl font-bold text-gray-900">
+                Welcome to Akkodis AI
+              </h2>
               <p className="text-gray-600 text-lg max-w-md mx-auto">
-                Start a conversation to get instant answers from your documents using advanced AI technology.
+                Start a conversation to get instant answers from your documents
+                using advanced AI technology.
               </p>
             </div>
 
@@ -202,27 +220,35 @@ export default async function Home() {
             {/* Example Questions */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors shadow-sm">
-                <div className="text-sm font-medium mb-1 text-gray-900">Placeholder question 1</div>
+                <div className="text-sm font-medium mb-1 text-gray-900">
+                  Placeholder question 1
+                </div>
                 <div className="text-xs text-gray-500">
-                  "Summarize the key points from the uploaded manual"
+                  &quot;Summarize the key points from the uploaded manual&quot;
                 </div>
               </div>
               <div className="p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors shadow-sm">
-                <div className="text-sm font-medium mb-1 text-gray-900">Placeholder question 2</div>
+                <div className="text-sm font-medium mb-1 text-gray-900">
+                  Placeholder question 2
+                </div>
                 <div className="text-xs text-gray-500">
-                  "What are the installation requirements?"
+                  &quot;What are the installation requirements?&quot;
                 </div>
               </div>
               <div className="p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors shadow-sm">
-                <div className="text-sm font-medium mb-1 text-gray-900">Placeholder question 3</div>
+                <div className="text-sm font-medium mb-1 text-gray-900">
+                  Placeholder question 3
+                </div>
                 <div className="text-xs text-gray-500">
-                  "Compare features between product versions"
+                  &quot;Compare features between product versions&quot;
                 </div>
               </div>
               <div className="p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors shadow-sm">
-                <div className="text-sm font-medium mb-1 text-gray-900">Placeholder question 4</div>
+                <div className="text-sm font-medium mb-1 text-gray-900">
+                  Placeholder question 4
+                </div>
                 <div className="text-xs text-gray-500">
-                  "Explain the technical specifications in detail"
+                  &quot;Explain the technical specifications in detail&quot;
                 </div>
               </div>
             </div>
