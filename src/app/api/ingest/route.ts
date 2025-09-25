@@ -1,29 +1,10 @@
 import { createClient } from "@/features/auth/lib/supabase/server";
+import { createServiceClient } from "@/features/auth/lib/supabase/service";
 import { NextResponse } from "next/server";
-import { embed } from "@/features/knowledgebase/actions/embed";
-import { storeEmbeddings } from "@/server/vector/pg";
-import { parsePdf } from "@/server/parser/pdf";
-import { chunkText } from "@/server/rag/chunker";
-
-async function parseDocument(
-  fileContent: Buffer,
-  mimeType: string,
-): Promise<string> {
-  if (mimeType === "application/pdf") {
-    return parsePdf(fileContent);
-  } else if (
-    mimeType === "text/markdown" ||
-    mimeType === "text/plain" ||
-    mimeType.startsWith("text/")
-  ) {
-    return fileContent.toString("utf-8");
-  } else {
-    throw new Error(`Unsupported file type: ${mimeType}`);
-  }
-}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
+  const supabaseService = createServiceClient();
 
   try {
     const formData = await request.formData();
@@ -92,109 +73,85 @@ export async function POST(request: Request) {
 
       // --- Start Ingestion Processing Logic (moved from process/[documentId]/route.ts) ---
 
-      const fileBuffer = await file.arrayBuffer(); // Use the original file buffer
-      const fileContent = Buffer.from(fileBuffer);
-
-      const { error: processingStatusError } = await supabase
-        .from("documents")
-        .update({ status: "processing" })
-        .eq("id", documentId);
-
-      if (processingStatusError) {
+      if (!uploadData?.path) {
         console.error(
-          `Error updating document ${documentId} to processing:`,
-          processingStatusError,
+          `Upload returned no path for file ${file.name}, skipping ingestion`,
         );
+        continue;
       }
 
-      // 3. Parse the document
-      let parsedText: string;
-      try {
-        parsedText = await parseDocument(
-          fileContent,
-          file.type || "unknown_file",
-        );
-      } catch (parseError) {
-        console.error(
-          `Error parsing document ${file.name || "unknown_file"}:`,
-          parseError,
-        );
-        // Update document status to error if parsing fails
-        await supabase
-          .from("documents")
-          .update({ status: "error" })
-          .eq("id", documentId);
-        continue; // Continue to next file
-      }
+      const payload = {
+        documentId,
+        storagePath: uploadData.path,
+        userId: user.id,
+        filename: file.name,
+        mimeType: file.type || "application/octet-stream",
+        size: file.size,
+      } as const;
 
-      // 4. Chunk the parsed content
-      const chunks = chunkText(parsedText);
-      console.log(
-        `Generated ${chunks.length} chunks for document ${file.name || "unknown_file"}`,
-      );
+      void supabaseService.functions
+        .invoke("ingest", {
+          body: payload,
+        })
+        .then((result) => {
+          if (result.error) {
+            console.error(
+              `Edge ingest failed for document ${documentId}:`,
+              result.error,
+            );
+            void supabaseService
+              .from("documents")
+              .update({ status: "error" })
+              .eq("id", documentId)
+              .catch((statusError) => {
+                console.error(
+                  `Failed to mark document ${documentId} as error after edge failure:`,
+                  statusError,
+                );
+              });
+            return;
+          }
 
-      // 5. Generate embeddings for each chunk
-      const embeddings: number[][] = [];
-      const chunkContents: string[] = [];
-      const chunkMetas: Record<string, unknown>[] = [];
+          const responseStatus =
+            typeof result.data === "object" &&
+            result.data !== null &&
+            "status" in result.data
+              ? (result.data as { status?: string }).status
+              : undefined;
 
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        if (chunk.length === 0) continue;
-
-        const { embedding, dimensions, model } = await embed({ text: chunk });
-        embeddings.push(embedding);
-        chunkContents.push(chunk);
-        chunkMetas.push({
-          filename: file.name || "unknown_file",
-          mime_type: file.type,
-          model,
-          dimensions,
-          chunk_index: i,
-        });
-      }
-
-      // 6. Upsert chunks into the vector database using storeEmbeddings
-      if (embeddings.length > 0) {
-        try {
-          await storeEmbeddings(
-            embeddings,
-            user.id,
-            documentId,
-            chunkContents,
-            chunkMetas,
-          );
-        } catch (upsertError) {
+          if (responseStatus === "error") {
+            console.error(
+              `Edge ingest returned error status for document ${documentId}:`,
+              result.data,
+            );
+            void supabaseService
+              .from("documents")
+              .update({ status: "error" })
+              .eq("id", documentId)
+              .catch((statusError) => {
+                console.error(
+                  `Failed to mark document ${documentId} as error after edge error response:`,
+                  statusError,
+                );
+              });
+          }
+        })
+        .catch((invokeError) => {
           console.error(
-            `Error upserting chunks for document ${documentId}:`,
-            upsertError,
+            `Failed to invoke ingest edge function for document ${documentId}:`,
+            invokeError,
           );
-          // Update document status to error if upserting fails
-          await supabase
+          void supabaseService
             .from("documents")
             .update({ status: "error" })
-            .eq("id", documentId);
-          continue; // Continue to next file
-        }
-      } else {
-        console.warn(`No chunks to upsert for document ${documentId}`);
-      }
-
-      // 7. Update document status to 'ready'
-      const { error: updateError } = await supabase
-        .from("documents")
-        .update({ status: "ready" })
-        .eq("id", documentId);
-
-      if (updateError) {
-        console.error(
-          `Error updating document status for ${documentId}:`,
-          updateError,
-        );
-        // Even if status update fails, we consider the main processing done, but log it.
-      }
-
-      // --- End Ingestion Processing Logic ---
+            .eq("id", documentId)
+            .catch((statusError) => {
+              console.error(
+                `Failed to mark document ${documentId} as error after invoke failure:`,
+                statusError,
+              );
+            });
+        });
 
       jobIds.push(jobId);
     }
