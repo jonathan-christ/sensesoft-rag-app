@@ -1,5 +1,5 @@
 import { createClient } from "@/features/auth/lib/supabase/server";
-import { embed } from "@/features/knowledgebase/actions/embed";
+import { embed } from "@/features/docs/actions/embed";
 import type { Database } from "@/lib/database.types";
 
 type MatchChunksArgs = Database["public"]["Functions"]["match_chunks"]["Args"];

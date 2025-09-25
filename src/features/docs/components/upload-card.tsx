@@ -17,7 +17,7 @@ import {
   UploadCloud,
   X,
 } from "lucide-react";
-import { formatBytes } from "@/features/knowledgebase/lib/format-bytes";
+import { formatBytes } from "@/features/docs/lib/format-bytes";
 
 type UploadCardProps = {
   files: File[];

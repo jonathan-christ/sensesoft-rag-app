@@ -9,12 +9,12 @@ import {
 } from "@/features/shared/components/ui/card";
 import { Button } from "@/features/shared/components/ui/button";
 import { cn } from "@/features/shared/lib/utils";
-import { formatBytes } from "@/features/knowledgebase/lib/format-bytes";
+import { formatBytes } from "@/features/docs/lib/format-bytes";
 import {
   getStatusStyle,
   sortDocuments,
-} from "@/features/knowledgebase/lib/status";
-import type { DocumentRow } from "@/features/knowledgebase/lib/types";
+} from "@/features/docs/lib/status";
+import type { DocumentRow } from "@/features/docs/lib/types";
 import {
   AlertTriangle,
   CheckCircle2,

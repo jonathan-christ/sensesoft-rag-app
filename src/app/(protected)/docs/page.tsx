@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { DocumentTableCard } from "@/features/knowledgebase/components/document-table-card";
-import { UploadCard } from "@/features/knowledgebase/components/upload-card";
-import type { DocumentRow } from "@/features/knowledgebase/lib/types";
+import { DocumentTableCard } from "@/features/docs/components/document-table-card";
+import { UploadCard } from "@/features/docs/components/upload-card";
+import type { DocumentRow } from "@/features/docs/lib/types";
 
 export default function DocsPage() {
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
