@@ -50,9 +50,11 @@ export async function streamChat(
         if (chatId) {
           try {
             const supabase = await createClient();
-            const { error } = await supabase.from("messages").insert([
-              { chat_id: chatId, role: "assistant", content: messageContent },
-            ]);
+            const { error } = await supabase
+              .from("messages")
+              .insert([
+                { chat_id: chatId, role: "assistant", content: messageContent },
+              ]);
             if (error) {
               console.error("Error saving messages:", error);
             }
