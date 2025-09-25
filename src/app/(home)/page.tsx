@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Send, Paperclip, MessageSquare } from "lucide-react";
 
 import { createClient } from "@/features/auth/lib/supabase/server";
@@ -10,21 +11,48 @@ import { Input } from "@/features/shared/components/ui/input";
 export default async function Home() {
   const supabase = await createClient();
 
-  const { data } = await supabase.auth.getClaims();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // Mock data for recent chats
-  const recentChats = [
-    { id: 1, title: "Placeholder title 1", time: "2 hours ago" },
-    { id: 2, title: "Placeholder title 2", time: "1 day ago" },
-    { id: 3, title: "Placeholder title 3", time: "3 days ago" },
-    { id: 4, title: "Placeholder title 4", time: "1 week ago" },
-    { id: 5, title: "Placeholder title 5", time: "2 weeks ago" }
-  ];
+  // Load the user's recent chats
+  let chats: Array<{ id: string; title: string | null; created_at: string; updated_at: string }> = [];
+  if (user) {
+    const { data: userChats } = await supabase
+      .from("chats")
+      .select("id, title, created_at, updated_at")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false });
+    chats = userChats ?? [];
+  }
+
+  async function createNewChat() {
+    "use server";
+    // Use the same API flow as Chat page's createChat
+    try {
+      const res = await fetch("/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "New Chat" }),
+      });
+
+      if (res.status === 401) {
+        redirect("/login");
+      }
+
+      // We don't need the id here; the Chat page will auto-select the most recent chat
+      // If needed, we could parse it: const newChat = await res.json();
+    } catch (e) {
+      // Ignore and continue to redirect; Chat page will handle loading
+    }
+
+    redirect("/chat");
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm">
+  <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm sticky top-0 h-screen min-h-0">
         {/* Logo */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center space-x-3">
@@ -41,32 +69,50 @@ export default async function Home() {
 
         {/* New Chat Button */}
         <div className="p-4">
-          <Button className="w-full bg-[#ffb81c] text-white hover:bg-[#ffb81c]/90 font-medium">
-            <MessageSquare className="w-4 h-4 mr-2" />
-            New Chat
-          </Button>
+          {user ? (
+            <form action={createNewChat}>
+              <Button type="submit" className="w-full bg-[#ffb81c] text-white hover:bg-[#ffb81c]/90 font-medium">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                New Chat
+              </Button>
+            </form>
+          ) : (
+            <Link href="/login">
+              <Button className="w-full bg-[#ffb81c] text-white hover:bg-[#ffb81c]/90 font-medium">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                New Chat
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Recent Chats */}
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 pb-4">
             <h3 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">
-              Recent
+              {user ? "Your Chats" : "Recent"}
             </h3>
             <div className="space-y-1">
-              {recentChats.map((chat) => (
-                <div
-                  key={chat.id}
-                  className="p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors group"
-                >
-                  <div className="text-sm font-medium text-gray-900 mb-1 line-clamp-1">
-                    {chat.title}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {chat.time}
-                  </div>
+              {user && chats.length > 0 ? (
+                chats.map((chat) => (
+                  <Link
+                    key={chat.id}
+                    href={`/${chat.id}`}
+                    className="block p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors group"
+                  >
+                    <div className="text-sm font-medium text-gray-900 mb-1 line-clamp-1">
+                      {chat.title || "Untitled chat"}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(chat.updated_at || chat.created_at).toLocaleDateString()}
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="text-xs text-gray-500">
+                  {user ? "No chats yet. Start a new conversation!" : "Login to see your recent chats."}
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -75,7 +121,7 @@ export default async function Home() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="p-4 border-b border-gray-200 bg-white shadow-sm">
+  <header className="p-4 border-b border-gray-200 bg-white shadow-sm sticky top-0 z-10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/75">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-lg font-semibold text-gray-900">Akkodis AI Assistant</h1>
@@ -86,7 +132,7 @@ export default async function Home() {
             
             {/* Auth buttons moved to top right */}
             <div className="flex items-center space-x-3">
-              {data ? (
+              {user ? (
                 <div className="flex items-center space-x-4">
                   <span className="text-gray-600 text-sm">
                     Welcome back!

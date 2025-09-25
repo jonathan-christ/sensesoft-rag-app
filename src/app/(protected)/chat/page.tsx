@@ -61,7 +61,7 @@ const simulateStreamingResponse = async (
 
   const baseResponse =
     responses[Math.floor(Math.random() * responses.length)] +
-    userInput.toLowerCase();
+    (userInput ?? "").toLowerCase();
   const fullResponse =
     baseResponse +
     ". Here's what I think would be most helpful for your situation.";
@@ -137,6 +137,8 @@ async function* parseSSEStream(response: Response) {
 }
 
 function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
+  // Helper: safely lowercase strings (returns empty string for null/undefined)
+  const safeLower = (v: unknown) => (typeof v === "string" ? v.toLowerCase() : "");
   const [chats, setChats] = useState<ChatRow[]>([]);
   const [activeChatId, setActiveChatId] = useState<string>(initialChatId || "");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -282,10 +284,12 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Filter chats based on search query
-  const filteredChats = chats.filter((chat) =>
-    chat.title.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  // Filter chats based on search query (defensive against nulls)
+  const query = safeLower(searchQuery);
+  const filteredChats = chats.filter((chat) => {
+    const title = safeLower(chat.title ?? "Untitled chat");
+    return title.includes(query);
+  });
 
   const createChat = useCallback(async () => {
     await createChatInBackend(`Chat ${chats.length + 1}`);
@@ -303,7 +307,7 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
 
   const beginRename = useCallback((chat: ChatRow) => {
     setRenamingChatId(chat.id);
-    setRenameValue(chat.title);
+    setRenameValue(chat.title ?? "");
   }, []);
 
   const submitRename = useCallback(
@@ -750,7 +754,7 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate">
-                          {chat.title}
+                          {chat.title || "Untitled chat"}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {new Date(chat.created_at).toLocaleDateString()}
@@ -814,7 +818,7 @@ function ChatApp({ initialChatId }: { initialChatId?: string } = {}) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <h1 className="font-semibold text-lg">
-                    {activeChat ? activeChat.title : "Select a chat"}
+                    {activeChat ? activeChat.title || "Untitled chat" : "Select a chat"}
                   </h1>
                   {sending && (
                     <div className="flex items-center gap-2 text-muted-foreground">
