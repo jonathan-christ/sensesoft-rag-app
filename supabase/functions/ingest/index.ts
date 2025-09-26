@@ -2,7 +2,7 @@ import {
   supabase,
   SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
-} from "../_shared/ingest.ts";
+} from "../_shared/ingest";
 
 interface StagePayload {
   jobId: string;
