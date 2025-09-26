@@ -8,7 +8,7 @@ async function* parseSSEStream(response: Response) {
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  let emittedContent = false;
+  let emittedText = "";
   if (!reader) throw new Error("No response body");
   try {
     while (true) {
@@ -23,13 +23,25 @@ async function* parseSSEStream(response: Response) {
           try {
             const data = JSON.parse(line.slice(6));
             if (data.type === "token" && data.delta) {
-              emittedContent = true;
-              yield data.delta as string;
+              const delta = data.delta as string;
+              if (delta) {
+                emittedText += delta;
+                yield delta;
+              }
             } else if (data.type === "final" && data.message) {
               const finalContent = data.message.content as string;
-              if (!emittedContent && finalContent) {
-                yield finalContent;
-                emittedContent = true;
+              if (finalContent) {
+                if (!finalContent.startsWith(emittedText)) {
+                  // Fallback: emit the entire message if streaming diverged.
+                  yield finalContent;
+                  emittedText = finalContent;
+                } else {
+                  const remainder = finalContent.slice(emittedText.length);
+                  if (remainder) {
+                    emittedText += remainder;
+                    yield remainder;
+                  }
+                }
               }
               return;
             } else if (data.type === "done") {
@@ -39,8 +51,9 @@ async function* parseSSEStream(response: Response) {
             // ignore
           }
         } else if (line.trim()) {
-          emittedContent = true;
-          yield line as string;
+          const plain = line as string;
+          emittedText += plain;
+          yield plain;
         }
       }
     }
