@@ -17,8 +17,10 @@ export async function searchRelevantChunks(
   const supabase = await createClient();
   const { embedding } = await embed({ text: query });
 
+  const queryEmbedding = `[${embedding.join(",")}]`;
+
   const rpcArgs: MatchChunksArgs = {
-    query_embedding: embedding,
+    query_embedding: queryEmbedding,
     match_count: topK,
     min_similarity: minSimilarity,
   };
