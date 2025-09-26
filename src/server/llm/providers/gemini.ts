@@ -22,7 +22,7 @@ const genAI = new GoogleGenerativeAI(GOOGLE_GENAI_API_KEY);
 export async function streamChat(opts: ChatStreamOptions): Promise<void> {
   const {
     messages,
-    max_tokens = 1000,
+    max_tokens = 2048,
     temperature = 0.7,
     onToken,
     onFinal,

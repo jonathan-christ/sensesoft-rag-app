@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Message, ChatRow } from "@/lib/types";
 
+import { syncLatestAssistantMessage } from "../lib/sync";
+
 type ChatStreamEvent =
   | { type: "delta"; data: string }
   | { type: "final"; data: string }
@@ -339,7 +341,7 @@ export function useChatApp(initialChatId?: string) {
               chatId: activeChatId,
               messages: chatMessages,
               temperature: 0.7,
-              max_tokens: 1000,
+              max_tokens: 2048,
             }),
           });
           if (!apiResponse.ok)
@@ -375,6 +377,19 @@ export function useChatApp(initialChatId?: string) {
             m.id === messageId ? { ...m, _streaming: false } : m,
           ),
         );
+
+        if (activeChatId) {
+          const latestAssistant = await syncLatestAssistantMessage(activeChatId);
+          if (latestAssistant) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId
+                  ? { ...m, content: latestAssistant.content }
+                  : m,
+              ),
+            );
+          }
+        }
       } catch (error) {
         throw error;
       }
