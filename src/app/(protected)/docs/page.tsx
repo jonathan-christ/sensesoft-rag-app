@@ -7,7 +7,7 @@ import { useDocsPage } from "@/features/docs/hooks/useDocsPage";
 export default function DocsPage() {
   const {
     state: { documents, loading, uploading, error, files },
-    actions: { addFiles, removeFile, upload, refresh, setError },
+    actions: { addFiles, removeFile, upload, refresh },
   } = useDocsPage();
 
   return (

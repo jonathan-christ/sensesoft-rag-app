@@ -465,7 +465,7 @@ export function useChatApp(initialChatId?: string) {
     setInput("");
     try {
       await handleStreamingResponse(assistantMsg.id, currentInput);
-    } catch (error) {
+    } catch {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMsg.id
@@ -483,7 +483,7 @@ export function useChatApp(initialChatId?: string) {
     } finally {
       setSending(false);
     }
-  }, [input, sending, activeChatId, saveUserMessage, handleStreamingResponse]);
+  }, [input, sending, activeChatId, saveUserMessage, handleStreamingResponse, createChatInBackend]);
 
   const retryMessage = useCallback(
     (messageId: string) => {
