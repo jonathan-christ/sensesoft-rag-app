@@ -23,7 +23,7 @@ function ChatAppInner({ initialChatId }: { initialChatId?: string }) {
       setTimeout(() => ctx.sendMessage(), 0);
       router.replace("/chat");
     }
-  }, [initialMessage]);
+  }, [initialMessage, ctx, router]);
   const activeTitle = ctx.activeChat ? ctx.activeChat.title : "Select a chat";
   return (
     <div className="flex h-screen bg-background">

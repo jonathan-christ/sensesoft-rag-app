@@ -1,0 +1,6 @@
+export const STATUS_ORDER = [
+  "pending",
+  "processing",
+  "ready",
+  "error",
+] as const;

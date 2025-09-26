@@ -55,6 +55,11 @@ export function MessagesPanel(props: {
                     )}
                   </div>
                 )}
+                {msg._limitNotice && (
+                  <div className="mt-2 text-xs text-amber-600">
+                    ⚠️ {msg._limitNotice}
+                  </div>
+                )}
                 <div className="text-xs opacity-70 mt-2">
                   {new Date(msg.created_at).toLocaleTimeString()}
                 </div>

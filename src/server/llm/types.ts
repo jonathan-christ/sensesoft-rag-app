@@ -8,7 +8,7 @@ export interface EmbedRequest {
 export interface EmbedResponse {
   embedding: number[];
   model: string;
-  dimensions: 1536 | 3072;
+  dimensions: number;
 }
 
 export interface StreamChatRequest {
@@ -25,7 +25,7 @@ export interface StreamChatResponse {
 export interface ChatStreamOptions extends StreamChatRequest {
   model: string;
   onToken: (delta: string) => void;
-  onFinal?: (full: string) => void;
+  onFinal?: (full: string, meta?: { finishReason?: string }) => void;
   signal?: AbortSignal;
 }
 
