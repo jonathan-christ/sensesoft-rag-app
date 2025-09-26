@@ -50,10 +50,7 @@ export default function SidebarShell({
     href === "/"
       ? pathname === "/"
       : pathname === href || pathname.startsWith(href + "/");
-  const inScope =
-    pathname === "/" ||
-    pathname.startsWith("/chat") ||
-    pathname.startsWith("/docs");
+  const inScope = pathname === "/" || pathname.startsWith("/docs");
 
   if (!inScope) return <>{children}</>;
 
@@ -85,15 +82,9 @@ export default function SidebarShell({
         <nav className="flex-1 space-y-1 pt-1">
           <SidebarLink
             href="/"
-            label="Home"
-            icon={<Home className="h-4 w-4" />}
-            active={isActive("/")}
-          />
-          <SidebarLink
-            href="/chat"
             label="Chat"
             icon={<MessageSquare className="h-4 w-4" />}
-            active={isActive("/chat")}
+            active={isActive("/")}
           />
           <SidebarLink
             href="/docs"
