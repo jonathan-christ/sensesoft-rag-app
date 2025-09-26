@@ -6,6 +6,7 @@ import {
   supabase,
   SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
+  markJobError,
 } from "../_shared/ingest.ts";
 
 interface ParsePayload {
@@ -15,22 +16,6 @@ interface ParsePayload {
 const CHUNK_INSERT_BATCH = Number(
   Deno.env.get("INGEST_CHUNK_INSERT_BATCH") ?? "100",
 );
-
-async function markJobError(
-  jobId: string,
-  documentId: string,
-  message: string,
-) {
-  await supabase
-    .from("document_jobs")
-    .update({ status: "error", error: message })
-    .eq("id", jobId);
-
-  await supabase
-    .from("documents")
-    .update({ status: "error" })
-    .eq("id", documentId);
-}
 
 async function triggerEmbed(jobId: string) {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/ingest-embed`, {
@@ -55,9 +40,12 @@ Deno.serve(async (req) => {
     return new Response("Method Not Allowed", { status: 405 });
   }
 
+  let payload: Partial<ParsePayload> | null = null;
+  let jobDocumentId: string | null = null;
+
   try {
-    const body = (await req.json()) as Partial<ParsePayload>;
-    const { jobId } = body;
+    payload = (await req.json()) as Partial<ParsePayload>;
+    const { jobId } = payload ?? {};
 
     if (!jobId) {
       return new Response("Invalid payload", { status: 400 });
@@ -75,6 +63,12 @@ Deno.serve(async (req) => {
       console.error("Document job not found", jobError);
       return new Response("Job not found", { status: 404 });
     }
+
+    jobDocumentId = job.document_id;
+
+    console.log(
+      `ingest-parse processing job ${jobId} for document ${job.document_id}`,
+    );
 
     await supabase
       .from("document_jobs")
@@ -94,10 +88,17 @@ Deno.serve(async (req) => {
     const arrayBuffer = await fileData.arrayBuffer();
     const fileBuffer = Buffer.from(arrayBuffer);
 
-    const parsedText = await parseDocument(
-      fileBuffer,
-      job.mime_type ?? "application/octet-stream",
-    );
+    let parsedText: string;
+    try {
+      parsedText = await parseDocument(
+        fileBuffer,
+        job.mime_type ?? "application/octet-stream",
+      );
+    } catch (parseError) {
+      console.error(`Failed to parse document for job ${jobId}`, parseError);
+      await markJobError(jobId, job.document_id, "parse_failed");
+      return new Response("Parse failed", { status: 400 });
+    }
 
     const chunks = chunkText(parsedText);
 
@@ -153,6 +154,10 @@ Deno.serve(async (req) => {
       })
       .eq("id", jobId);
 
+    console.log(
+      `ingest-parse queued ${chunkJobs.length} chunks for job ${jobId}`,
+    );
+
     await triggerEmbed(jobId);
 
     return new Response(
@@ -164,6 +169,9 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("ingest-parse failed", error);
+    if (payload?.jobId && jobDocumentId) {
+      await markJobError(payload.jobId, jobDocumentId, "unexpected_error");
+    }
     return new Response("Internal Server Error", { status: 500 });
   }
 });

@@ -5,29 +5,16 @@ import {
   EMBEDDING_DIM,
   SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
+  markJobError,
 } from "../_shared/ingest.ts";
 
 interface EmbedPayload {
   jobId: string;
 }
 
-const EMBED_BATCH_SIZE = Number(Deno.env.get("INGEST_EMBED_BATCH_SIZE") ?? "8");
-
-async function markJobError(
-  jobId: string,
-  documentId: string,
-  message: string,
-) {
-  await supabase
-    .from("document_jobs")
-    .update({ status: "error", error: message })
-    .eq("id", jobId);
-
-  await supabase
-    .from("documents")
-    .update({ status: "error" })
-    .eq("id", documentId);
-}
+const EMBED_BATCH_SIZE = Number(
+  Deno.env.get("INGEST_EMBED_BATCH_SIZE") ?? "8",
+);
 
 async function queueNextBatch(jobId: string) {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/ingest-embed`, {
@@ -52,9 +39,12 @@ Deno.serve(async (req) => {
     return new Response("Method Not Allowed", { status: 405 });
   }
 
+  let payload: Partial<EmbedPayload> | null = null;
+  let jobDocumentId: string | null = null;
+
   try {
-    const body = (await req.json()) as Partial<EmbedPayload>;
-    const { jobId } = body;
+    payload = (await req.json()) as Partial<EmbedPayload>;
+    const { jobId } = payload ?? {};
 
     if (!jobId) {
       return new Response("Invalid payload", { status: 400 });
@@ -73,6 +63,12 @@ Deno.serve(async (req) => {
       return new Response("Job not found", { status: 404 });
     }
 
+    jobDocumentId = job.document_id;
+
+    console.log(
+      `ingest-embed processing job ${jobId} (processed ${job.processed_chunks}/${job.total_chunks})`,
+    );
+
     if (job.status === "error" || job.status === "completed") {
       return new Response(JSON.stringify({ status: job.status }), {
         status: 200,
@@ -80,7 +76,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: chunkJobs, error: chunkSelectError } = await supabase
+    const {
+      data: chunkJobs,
+      error: chunkSelectError,
+    } = await supabase
       .from("document_chunk_jobs")
       .select("id, chunk_index, content, status")
       .eq("document_job_id", jobId)
@@ -118,6 +117,10 @@ Deno.serve(async (req) => {
         .from("documents")
         .update({ status: "ready" })
         .eq("id", job.document_id);
+
+      console.log(
+        `ingest-embed completed job ${jobId} for document ${job.document_id}`,
+      );
 
       return new Response(JSON.stringify({ status: "completed" }), {
         status: 200,
@@ -198,6 +201,9 @@ Deno.serve(async (req) => {
       .eq("status", "queued");
 
     if (remaining && remaining > 0) {
+      console.log(
+        `ingest-embed processed ${completedCount} chunks for job ${jobId}, ${remaining} remaining`,
+      );
       await queueNextBatch(jobId);
       return new Response(JSON.stringify({ status: "embedding", remaining }), {
         status: 200,
@@ -229,12 +235,19 @@ Deno.serve(async (req) => {
       .update({ status: "ready" })
       .eq("id", job.document_id);
 
+    console.log(
+      `ingest-embed completed job ${jobId} for document ${job.document_id}`,
+    );
+
     return new Response(JSON.stringify({ status: "completed" }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("ingest-embed failed", error);
+    if (payload?.jobId && jobDocumentId) {
+      await markJobError(payload.jobId, jobDocumentId, "unexpected_error");
+    }
     return new Response("Internal Server Error", { status: 500 });
   }
 });

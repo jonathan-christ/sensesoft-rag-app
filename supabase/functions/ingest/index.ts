@@ -2,7 +2,9 @@ import {
   supabase,
   SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
-} from "../_shared/ingest";
+  markDocumentError,
+  markJobError,
+} from "../_shared/ingest.ts";
 
 interface StagePayload {
   jobId: string;
@@ -37,10 +39,19 @@ Deno.serve(async (req) => {
     return new Response("Method Not Allowed", { status: 405 });
   }
 
+  let payload: Partial<StagePayload> | null = null;
+
   try {
-    const payload = (await req.json()) as Partial<StagePayload>;
-    const { jobId, documentId, storagePath, userId, filename, mimeType, size } =
-      payload;
+    payload = (await req.json()) as Partial<StagePayload>;
+    const {
+      jobId,
+      documentId,
+      storagePath,
+      userId,
+      filename,
+      mimeType,
+      size,
+    } = payload;
 
     if (
       !jobId ||
@@ -70,6 +81,7 @@ Deno.serve(async (req) => {
 
     if (jobInsertError) {
       console.error("Failed to insert document job", jobInsertError);
+      await markDocumentError(documentId, "job_insert_failed");
       return new Response("Failed to insert job", { status: 500 });
     }
 
@@ -95,8 +107,13 @@ Deno.serve(async (req) => {
         "Failed to update document status to processing",
         docUpdateError,
       );
+      await markJobError(jobId, documentId, "document_update_failed");
       return new Response("Failed to update document", { status: 500 });
     }
+
+    console.log(
+      `ingest-stage queued job ${jobId} for document ${documentId} (${filename})`,
+    );
 
     await triggerParse(jobId);
 
@@ -106,6 +123,11 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("ingest-stage failed", error);
+    if (payload?.jobId && payload?.documentId) {
+      await markJobError(payload.jobId, payload.documentId, "stage_failed");
+    } else if (payload?.documentId) {
+      await markDocumentError(payload.documentId, "stage_failed");
+    }
     return new Response("Internal Server Error", { status: 500 });
   }
 });
