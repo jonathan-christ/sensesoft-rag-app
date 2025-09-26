@@ -1,10 +1,11 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
 
 import type { Message } from "@/lib/types";
 
 import {
   CHAT_MODEL,
   EMBEDDING_MODEL,
+  EMBEDDING_DIM,
   GOOGLE_GENAI_API_KEY,
 } from "../../config";
 import type { ChatStreamOptions, EmbedOptions } from "../types";
@@ -18,7 +19,7 @@ const genAI = new GoogleGenerativeAI(GOOGLE_GENAI_API_KEY);
 export async function streamChat(opts: ChatStreamOptions): Promise<void> {
   const {
     messages,
-    max_tokens = 1000,
+    max_tokens = 2048,
     temperature = 0.7,
     onToken,
     onFinal,
@@ -53,6 +54,7 @@ export async function streamChat(opts: ChatStreamOptions): Promise<void> {
 
   const latestMessage = conversation[conversation.length - 1];
   const result = await chat.sendMessageStream(latestMessage?.content ?? "");
+  const responsePromise = result.response;
 
   let fullText = "";
   for await (const chunk of result.stream) {
@@ -63,15 +65,37 @@ export async function streamChat(opts: ChatStreamOptions): Promise<void> {
     fullText += text;
     onToken(text);
   }
+  let finishReason: string | undefined;
   if (onFinal) {
-    onFinal(fullText);
+    try {
+      const finalResponse = await responsePromise;
+      finishReason = finalResponse?.candidates?.[0]?.finishReason ?? undefined;
+    } catch (responseError) {
+      console.error("Failed to retrieve Gemini finish reason:", responseError);
+    }
+    onFinal(fullText, { finishReason });
   }
 }
 
 export async function embed(opts: EmbedOptions): Promise<number[][]> {
   const { input } = opts;
+  const textInput = Array.isArray(input) ? input.join("\n\n") : input;
   const model = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
 
-  const result = await model.embedContent(input);
-  return [result.embedding.values];
+  const result = await model.embedContent({
+    content: {
+      role: "user",
+      parts: [{ text: textInput }],
+    },
+    taskType: TaskType.SEMANTIC_SIMILARITY,
+  });
+
+  const values = result.embedding?.values ?? [];
+  if (values.length !== EMBEDDING_DIM) {
+    throw new Error(
+      `Gemini embedding dimension mismatch: expected ${EMBEDDING_DIM}, got ${values.length}. Check EMBEDDING_MODEL or EMBEDDING_DIM configuration.`,
+    );
+  }
+
+  return [values];
 }
