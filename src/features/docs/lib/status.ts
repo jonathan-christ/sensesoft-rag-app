@@ -2,15 +2,20 @@ import type { DocumentRow } from "./types";
 import { STATUS_ORDER } from "@/features/shared/lib/const";
 
 const STATUS_CLASS_MAP: Record<string, string> = {
-  pending: "bg-amber-100 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200",
-  processing: "bg-blue-100 text-blue-800 dark:bg-blue-500/10 dark:text-blue-200",
-  ready: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200",
+  pending:
+    "bg-amber-100 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200",
+  processing:
+    "bg-blue-100 text-blue-800 dark:bg-blue-500/10 dark:text-blue-200",
+  ready:
+    "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200",
   error: "bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-200",
 };
 
 export function getStatusPriority(status: string | null): number {
   const normalized = status ?? "";
-  const index = STATUS_ORDER.indexOf(normalized as (typeof STATUS_ORDER)[number]);
+  const index = STATUS_ORDER.indexOf(
+    normalized as (typeof STATUS_ORDER)[number],
+  );
   return index === -1 ? STATUS_ORDER.length : index;
 }
 

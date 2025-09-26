@@ -10,10 +10,7 @@ import {
 import { Button } from "@/features/shared/components/ui/button";
 import { cn } from "@/features/shared/lib/utils";
 import { formatBytes } from "@/features/docs/lib/format-bytes";
-import {
-  getStatusStyle,
-  sortDocuments,
-} from "@/features/docs/lib/status";
+import { getStatusStyle, sortDocuments } from "@/features/docs/lib/status";
 import type { DocumentRow } from "@/features/docs/lib/types";
 import {
   AlertTriangle,

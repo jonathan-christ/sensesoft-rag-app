@@ -8,8 +8,7 @@ export function sanitizeFileName(name: string): string {
 
   const base =
     lastDotIndex > 0 ? normalized.slice(0, lastDotIndex) : normalized;
-  const extension =
-    lastDotIndex > 0 ? normalized.slice(lastDotIndex + 1) : "";
+  const extension = lastDotIndex > 0 ? normalized.slice(lastDotIndex + 1) : "";
 
   const sanitizeSegment = (segment: string): string =>
     segment

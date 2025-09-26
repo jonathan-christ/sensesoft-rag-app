@@ -1,1 +1,6 @@
-export const STATUS_ORDER = ["pending", "processing", "ready", "error"] as const;
+export const STATUS_ORDER = [
+  "pending",
+  "processing",
+  "ready",
+  "error",
+] as const;

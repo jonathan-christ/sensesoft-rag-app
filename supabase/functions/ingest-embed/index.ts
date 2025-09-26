@@ -11,9 +11,7 @@ interface EmbedPayload {
   jobId: string;
 }
 
-const EMBED_BATCH_SIZE = Number(
-  Deno.env.get("INGEST_EMBED_BATCH_SIZE") ?? "8",
-);
+const EMBED_BATCH_SIZE = Number(Deno.env.get("INGEST_EMBED_BATCH_SIZE") ?? "8");
 
 async function markJobError(
   jobId: string,
@@ -62,10 +60,7 @@ Deno.serve(async (req) => {
       return new Response("Invalid payload", { status: 400 });
     }
 
-    const {
-      data: job,
-      error: jobError,
-    } = await supabase
+    const { data: job, error: jobError } = await supabase
       .from("document_jobs")
       .select(
         "id, document_id, filename, mime_type, size_bytes, status, total_chunks, processed_chunks",
@@ -79,16 +74,13 @@ Deno.serve(async (req) => {
     }
 
     if (job.status === "error" || job.status === "completed") {
-      return new Response(
-        JSON.stringify({ status: job.status }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ status: job.status }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    const {
-      data: chunkJobs,
-      error: chunkSelectError,
-    } = await supabase
+    const { data: chunkJobs, error: chunkSelectError } = await supabase
       .from("document_chunk_jobs")
       .select("id, chunk_index, content, status")
       .eq("document_job_id", jobId)

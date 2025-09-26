@@ -1,7 +1,4 @@
-import {
-  GoogleGenerativeAI,
-  TaskType,
-} from "@google/generative-ai";
+import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
 
 import type { Message } from "@/lib/types";
 

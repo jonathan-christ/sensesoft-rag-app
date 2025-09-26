@@ -1,6 +1,8 @@
 import type { Message } from "@/lib/types";
 
-export async function syncLatestAssistantMessage(chatId: string): Promise<Message | null> {
+export async function syncLatestAssistantMessage(
+  chatId: string,
+): Promise<Message | null> {
   if (!chatId) {
     return null;
   }

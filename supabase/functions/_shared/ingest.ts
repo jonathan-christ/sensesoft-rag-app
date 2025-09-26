@@ -1,9 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.48.0";
 import { Buffer } from "node:buffer";
-import {
-  GoogleGenerativeAI,
-  TaskType,
-} from "npm:@google/generative-ai";
+import { GoogleGenerativeAI, TaskType } from "npm:@google/generative-ai";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY =
@@ -35,7 +32,10 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 
 const genAI = new GoogleGenerativeAI(GOOGLE_GENAI_API_KEY);
 
-async function parseDocument(buffer: Buffer, mimeType: string): Promise<string> {
+async function parseDocument(
+  buffer: Buffer,
+  mimeType: string,
+): Promise<string> {
   if (mimeType === "application/pdf") {
     const { default: pdfParse } = (await import("npm:pdf-parse")) as {
       default: (data: Buffer) => Promise<{ text?: string }>;
@@ -55,11 +55,7 @@ async function parseDocument(buffer: Buffer, mimeType: string): Promise<string> 
   throw new Error(`Unsupported file type: ${mimeType}`);
 }
 
-function chunkText(
-  text: string,
-  chunkSize = 1000,
-  overlap = 200,
-): string[] {
+function chunkText(text: string, chunkSize = 1000, overlap = 200): string[] {
   const chunks: string[] = [];
   let i = 0;
   while (i < text.length) {

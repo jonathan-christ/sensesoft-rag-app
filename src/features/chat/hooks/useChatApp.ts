@@ -394,7 +394,8 @@ export function useChatApp(initialChatId?: string) {
         );
 
         if (activeChatId) {
-          const latestAssistant = await syncLatestAssistantMessage(activeChatId);
+          const latestAssistant =
+            await syncLatestAssistantMessage(activeChatId);
           if (latestAssistant) {
             setMessages((prev) =>
               prev.map((m) =>
@@ -483,7 +484,14 @@ export function useChatApp(initialChatId?: string) {
     } finally {
       setSending(false);
     }
-  }, [input, sending, activeChatId, saveUserMessage, handleStreamingResponse, createChatInBackend]);
+  }, [
+    input,
+    sending,
+    activeChatId,
+    saveUserMessage,
+    handleStreamingResponse,
+    createChatInBackend,
+  ]);
 
   const retryMessage = useCallback(
     (messageId: string) => {

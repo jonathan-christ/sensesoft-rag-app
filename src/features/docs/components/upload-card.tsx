@@ -10,13 +10,7 @@ import {
 } from "@/features/shared/components/ui/card";
 import { Button } from "@/features/shared/components/ui/button";
 import { Input } from "@/features/shared/components/ui/input";
-import {
-  AlertTriangle,
-  FileText,
-  Loader2,
-  UploadCloud,
-  X,
-} from "lucide-react";
+import { AlertTriangle, FileText, Loader2, UploadCloud, X } from "lucide-react";
 import { formatBytes } from "@/features/docs/lib/format-bytes";
 
 type UploadCardProps = {

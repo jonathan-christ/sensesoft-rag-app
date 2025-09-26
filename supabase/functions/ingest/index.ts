@@ -39,15 +39,8 @@ Deno.serve(async (req) => {
 
   try {
     const payload = (await req.json()) as Partial<StagePayload>;
-    const {
-      jobId,
-      documentId,
-      storagePath,
-      userId,
-      filename,
-      mimeType,
-      size,
-    } = payload;
+    const { jobId, documentId, storagePath, userId, filename, mimeType, size } =
+      payload;
 
     if (
       !jobId ||
@@ -61,17 +54,19 @@ Deno.serve(async (req) => {
       return new Response("Invalid payload", { status: 400 });
     }
 
-    const { error: jobInsertError } = await supabase.from("document_jobs").insert({
-      id: jobId,
-      document_id: documentId,
-      user_id: userId,
-      storage_path: storagePath,
-      filename,
-      mime_type: mimeType,
-      size_bytes: size,
-      status: "queued",
-      error: null,
-    });
+    const { error: jobInsertError } = await supabase
+      .from("document_jobs")
+      .insert({
+        id: jobId,
+        document_id: documentId,
+        user_id: userId,
+        storage_path: storagePath,
+        filename,
+        mime_type: mimeType,
+        size_bytes: size,
+        status: "queued",
+        error: null,
+      });
 
     if (jobInsertError) {
       console.error("Failed to insert document job", jobInsertError);
@@ -85,7 +80,7 @@ Deno.serve(async (req) => {
       .single();
 
     const updatedMeta = {
-      ...(document?.meta as Record<string, unknown> | null ?? {}),
+      ...((document?.meta as Record<string, unknown> | null) ?? {}),
       storage_path: storagePath,
       job_id: jobId,
     };
@@ -96,7 +91,10 @@ Deno.serve(async (req) => {
       .eq("id", documentId);
 
     if (docUpdateError) {
-      console.error("Failed to update document status to processing", docUpdateError);
+      console.error(
+        "Failed to update document status to processing",
+        docUpdateError,
+      );
       return new Response("Failed to update document", { status: 500 });
     }
 

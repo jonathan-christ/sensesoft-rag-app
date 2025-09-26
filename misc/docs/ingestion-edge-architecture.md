@@ -10,10 +10,10 @@
 
 ## Environment Variables
 
-| Location                | Variables                                                                    |
-| ----------------------- | ----------------------------------------------------------------------------- |
-| Next.js API Route       | `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
-| Edge Functions          | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (or `SERVICE_ROLE_KEY` / `EDGE_SERVICE_ROLE_KEY`), `GOOGLE_GENAI_API_KEY`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`, `STORAGE_BUCKET=documents`, optional `INGEST_CHUNK_INSERT_BATCH`, `INGEST_EMBED_BATCH_SIZE` |
+| Location          | Variables                                                                                                                                                                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Next.js API Route | `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`                                                                                                                                                                                                |
+| Edge Functions    | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (or `SERVICE_ROLE_KEY` / `EDGE_SERVICE_ROLE_KEY`), `GOOGLE_GENAI_API_KEY`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`, `STORAGE_BUCKET=documents`, optional `INGEST_CHUNK_INSERT_BATCH`, `INGEST_EMBED_BATCH_SIZE` |
 
 ## Status Lifecycle
 

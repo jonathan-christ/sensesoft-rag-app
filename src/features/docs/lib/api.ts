@@ -1,5 +1,7 @@
 export async function fetchDocuments(limit: number = 50) {
-  const response = await fetch(`/api/docs?limit=${limit}`, { cache: "no-store" });
+  const response = await fetch(`/api/docs?limit=${limit}`, {
+    cache: "no-store",
+  });
   if (!response.ok) {
     throw new Error(`Failed to load documents (${response.status})`);
   }
