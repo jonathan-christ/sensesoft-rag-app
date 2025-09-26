@@ -1,5 +1,6 @@
 import { createClient } from "@/features/auth/lib/supabase/server";
 import { createServiceClient } from "@/features/auth/lib/supabase/service";
+import { sanitizeFileName } from "@/features/docs/lib/filename";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -17,7 +18,8 @@ export async function POST(request: Request) {
     const jobIds: string[] = [];
 
     for (const file of files) {
-      const uniqueFileName = `${crypto.randomUUID()}-${file.name}`;
+      const safeFileName = sanitizeFileName(file.name);
+      const uniqueFileName = `${crypto.randomUUID()}-${safeFileName}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("documents") // Assuming a 'documents' bucket exists
         .upload(uniqueFileName, file, {
