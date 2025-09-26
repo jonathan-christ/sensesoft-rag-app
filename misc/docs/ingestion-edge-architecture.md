@@ -2,22 +2,26 @@
 
 ## Data Flow
 
-1. `/api/ingest` receives uploads, streams file(s) to the `documents` storage bucket with the authenticated user's credentials.
-2. Route inserts a `documents` row with `status="pending"` plus metadata (`storage_path`, `job_id`).
-3. Route invokes the Supabase Edge Function `ingest` using a service-role client, passing `{ documentId, storagePath, userId }`.
-4. Edge function updates the document to `processing`, downloads the file from storage, parses (PDF/plain text), chunks, embeds, and upserts into `chunks`.
-5. On success the function marks the document as `ready`; on any failure it stores the error in logs and marks the document as `error`.
+1. `/api/ingest` uploads the file to the `documents` storage bucket, inserts the `documents` row (`status="pending"`), and calls the `ingest` edge function (stage step) with job metadata.
+2. **Stage (`ingest`)**: records a `document_jobs` row, marks the document `processing`, and dispatches the parse worker.
+3. **Parse (`ingest-parse`)**: downloads the file, parses it to text, splits into chunks, and stores chunk work items in `document_chunk_jobs`.
+4. **Embed (`ingest-embed`)**: processes chunk jobs in small batches, generates embeddings, writes them to `chunks`, and advances job/document progress until complete.
+5. Once all chunk jobs are `completed`, the document flips to `ready`; any failure marks both the job and document `error`.
 
 ## Environment Variables
 
 | Location                | Variables                                                                    |
 | ----------------------- | ----------------------------------------------------------------------------- |
-| Next.js API Route       | `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_GENAI_API_KEY`, `EMBEDDING_MODEL`, `EMBEDDING_DIM` (passed through to function invocation if needed) |
-| Supabase Edge Function  | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_GENAI_API_KEY`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`, `STORAGE_BUCKET=documents` |
+| Next.js API Route       | `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
+| Edge Functions          | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (or `SERVICE_ROLE_KEY` / `EDGE_SERVICE_ROLE_KEY`), `GOOGLE_GENAI_API_KEY`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`, `STORAGE_BUCKET=documents`, optional `INGEST_CHUNK_INSERT_BATCH`, `INGEST_EMBED_BATCH_SIZE` |
 
 ## Status Lifecycle
 
-`pending` (after insert) → `processing` (edge function starts work) → `ready` (chunks stored) or `error` (failure recorded).
+`pending` (insert) → `processing` (stage + parse enqueue) → `ready` (all chunk jobs embedded) or `error` (any job failure).
+
+`document_jobs.status`: `queued` → `parsing` → `chunked` → `embedding` → `completed` / `error`.
+
+`document_chunk_jobs.status`: `queued` → `embedding` → `completed` / `error`.
 
 ## Invocation Contract
 
@@ -32,14 +36,13 @@
 }
 ```
 
-- All fields are required for logging and chunk metadata; document row already contains the same metadata, but including them allows the function to avoid additional lookups.
-- The function responds with `{ status: "ready" }` on success or `{ status: "error", message }` on failure.
+- Stage returns `{ status: "queued", jobId }` immediately while parse/embed continue in the background.
 
 ## Error Handling
 
-- Edge function wraps each ingestion phase and updates `status="error"` on failure.
-- Errors bubble to the caller so `/api/ingest` can surface failures during initial upload.
-- Chunk upserts and embedding calls are retried per chunk (no batching) to simplify error handling.
+- Each step (stage/parse/embed) guards its own errors and marks the job + document `error` if something fails; the Next.js route also sets `error` if dispatch fails.
+- Parse inserts chunk jobs in batches to avoid payload limits; embed processes a configurable batch size so individual invocations stay under 60s.
+- Failed chunk jobs remain `status="error"` for later retry tooling.
 
 ## Security
 

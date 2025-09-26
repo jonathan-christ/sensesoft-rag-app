@@ -73,6 +73,116 @@ export type Database = {
           },
         ];
       };
+      document_chunk_jobs: {
+        Row: {
+          chunk_index: number;
+          content: string;
+          created_at: string;
+          document_id: string;
+          document_job_id: string;
+          error: string | null;
+          id: string;
+          processed_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          chunk_index: number;
+          content: string;
+          created_at?: string;
+          document_id: string;
+          document_job_id: string;
+          error?: string | null;
+          id?: string;
+          processed_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          chunk_index?: number;
+          content?: string;
+          created_at?: string;
+          document_id?: string;
+          document_job_id?: string;
+          error?: string | null;
+          id?: string;
+          processed_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "document_chunk_jobs_document_id_fkey";
+            columns: ["document_id"];
+            isOneToOne: false;
+            referencedRelation: "documents";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "document_chunk_jobs_document_job_id_fkey";
+            columns: ["document_job_id"];
+            isOneToOne: false;
+            referencedRelation: "document_jobs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      document_jobs: {
+        Row: {
+          created_at: string;
+          document_id: string;
+          error: string | null;
+          filename: string | null;
+          id: string;
+          mime_type: string | null;
+          processed_chunks: number;
+          size_bytes: number | null;
+          status: string;
+          storage_path: string;
+          total_chunks: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          document_id: string;
+          error?: string | null;
+          filename?: string | null;
+          id?: string;
+          mime_type?: string | null;
+          processed_chunks?: number;
+          size_bytes?: number | null;
+          status?: string;
+          storage_path: string;
+          total_chunks?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          document_id?: string;
+          error?: string | null;
+          filename?: string | null;
+          id?: string;
+          mime_type?: string | null;
+          processed_chunks?: number;
+          size_bytes?: number | null;
+          status?: string;
+          storage_path?: string;
+          total_chunks?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "document_jobs_document_id_fkey";
+            columns: ["document_id"];
+            isOneToOne: false;
+            referencedRelation: "documents";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       documents: {
         Row: {
           created_at: string;
@@ -203,7 +313,7 @@ export type Database = {
         Args: {
           match_count: number;
           min_similarity: number;
-          query_embedding: number[];
+          query_embedding: string;
         };
         Returns: {
           chunk_id: number;
@@ -261,10 +371,7 @@ export type Database = {
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<
-  keyof Database,
-  "public"
->];
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends

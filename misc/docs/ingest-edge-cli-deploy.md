@@ -37,10 +37,13 @@ The values should mirror the environment used by `/api/ingest`. On the Next.js s
 
 ## 3. Local Function Serve
 
-Run the function locally to verify dependencies (`npm:` imports are fetched automatically by the CLI):
+Serve any of the functions locally to verify dependencies (`npm:` imports are fetched automatically by the CLI). The shared environment file works for all three functions:
 
 ```bash
 supabase functions serve ingest --env-file .env.ingest
+# In separate terminals you can also run:
+# supabase functions serve ingest-parse --env-file .env.ingest
+# supabase functions serve ingest-embed --env-file .env.ingest
 ```
 
 The CLI prints a local invoke URL. While `serve` is running, uploads from `/api/ingest` will hit this local instance as long as your app points to the same Supabase project.
@@ -55,13 +58,15 @@ supabase functions secrets set --env-file .env.ingest --project-ref <project-ref
 
 ## 5. Deploy the Function
 
-Deploy the compiled edge worker:
+Deploy all ingestion workers (stage, parse, embed):
 
 ```bash
 supabase functions deploy ingest --project-ref <project-ref>
+supabase functions deploy ingest-parse --project-ref <project-ref>
+supabase functions deploy ingest-embed --project-ref <project-ref>
 ```
 
-After deployment, `/api/ingest` invokes the hosted function automatically through `supabase.functions.invoke("ingest")`.
+After deployment, `/api/ingest` invokes the `ingest` (stage) function, which dispatches `ingest-parse` and `ingest-embed` in the background.
 
 ## 6. Smoke Test
 

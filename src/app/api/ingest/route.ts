@@ -3,6 +3,24 @@ import { createServiceClient } from "@/features/auth/lib/supabase/service";
 import { sanitizeFileName } from "@/features/docs/lib/filename";
 import { NextResponse } from "next/server";
 
+async function markDocumentStatus(
+  supabaseService: ReturnType<typeof createServiceClient>,
+  documentId: string,
+  status: "error" | "ready" | "processing",
+) {
+  try {
+    await supabaseService
+      .from("documents")
+      .update({ status })
+      .eq("id", documentId);
+  } catch (statusError) {
+    console.error(
+      `Failed to update document ${documentId} status to ${status}:`,
+      statusError,
+    );
+  }
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const supabaseService = createServiceClient();
@@ -83,6 +101,7 @@ export async function POST(request: Request) {
       }
 
       const payload = {
+        jobId,
         documentId,
         storagePath: uploadData.path,
         userId: user.id,
@@ -91,69 +110,42 @@ export async function POST(request: Request) {
         size: file.size,
       } as const;
 
-      void supabaseService.functions
-        .invoke("ingest", {
+      try {
+        const result = await supabaseService.functions.invoke("ingest", {
           body: payload,
-        })
-        .then((result) => {
-          if (result.error) {
-            console.error(
-              `Edge ingest failed for document ${documentId}:`,
-              result.error,
-            );
-            void supabaseService
-              .from("documents")
-              .update({ status: "error" })
-              .eq("id", documentId)
-              .catch((statusError) => {
-                console.error(
-                  `Failed to mark document ${documentId} as error after edge failure:`,
-                  statusError,
-                );
-              });
-            return;
-          }
-
-          const responseStatus =
-            typeof result.data === "object" &&
-            result.data !== null &&
-            "status" in result.data
-              ? (result.data as { status?: string }).status
-              : undefined;
-
-          if (responseStatus === "error") {
-            console.error(
-              `Edge ingest returned error status for document ${documentId}:`,
-              result.data,
-            );
-            void supabaseService
-              .from("documents")
-              .update({ status: "error" })
-              .eq("id", documentId)
-              .catch((statusError) => {
-                console.error(
-                  `Failed to mark document ${documentId} as error after edge error response:`,
-                  statusError,
-                );
-              });
-          }
-        })
-        .catch((invokeError) => {
-          console.error(
-            `Failed to invoke ingest edge function for document ${documentId}:`,
-            invokeError,
-          );
-          void supabaseService
-            .from("documents")
-            .update({ status: "error" })
-            .eq("id", documentId)
-            .catch((statusError) => {
-              console.error(
-                `Failed to mark document ${documentId} as error after invoke failure:`,
-                statusError,
-              );
-            });
+          headers: { Prefer: "resolution=async" },
         });
+
+        if (result.error) {
+          console.error(
+            `Edge ingest failed for document ${documentId}:`,
+            result.error,
+          );
+          await markDocumentStatus(supabaseService, documentId, "error");
+          continue;
+        }
+
+        if (
+          typeof result.data === "object" &&
+          result.data !== null &&
+          "status" in result.data &&
+          (result.data as { status?: string }).status === "error"
+        ) {
+          console.error(
+            `Edge ingest returned error status for document ${documentId}:`,
+            result.data,
+          );
+          await markDocumentStatus(supabaseService, documentId, "error");
+          continue;
+        }
+      } catch (invokeError) {
+        console.error(
+          `Failed to invoke ingest edge function for document ${documentId}:`,
+          invokeError,
+        );
+        await markDocumentStatus(supabaseService, documentId, "error");
+        continue;
+      }
 
       jobIds.push(jobId);
     }

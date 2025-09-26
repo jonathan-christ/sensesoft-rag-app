@@ -5,27 +5,26 @@
   - [ ] Confirm target Supabase project + environments, required runtime permissions, and edge function limits.
   - [ ] Identify RLS policies on `documents`, `chunks`, and storage buckets; note required service-role operations.
 
-- [ ] **Design Updated Architecture**
-  - [ ] Define new flow: Next.js uploads + job enqueue → Supabase Edge Function performs parsing/embedding → status updates.
-  - [ ] Decide how to trigger the edge function (HTTP call with service key vs. background queue).
-  - [ ] Map environment variables needed on the edge function (OpenAI/Gemini keys, pgvector connection string, Supabase service key).
-  - [ ] Document status lifecycle (`pending` → `processing` → `ready` / `error`) and retry behavior.
+- [x] **Design Updated Architecture**
+  - [x] Define new flow: upload → job staging → parse worker → embed worker with progress updates.
+  - [x] Trigger downstream workers via background edge invokes with service-role auth.
+  - [x] Map required environment variables for all three functions and document lifecycle expectations.
 
 - [ ] **Prepare Supabase Backend**
   - [ ] Ensure storage bucket policies permit edge function access (service role) while keeping client RLS intact.
   - [ ] Add/adjust `documents` and `chunks` RLS policies to allow service role writes without exposing client bypass.
   - [ ] (Optional) Create a jobs table or use storage metadata for backlog tracking if parallel processing is needed.
 
-- [ ] **Implement Edge Function**
-  - [ ] Scaffold `supabase/functions/ingest/index.ts` (or similar) with Deno entrypoint.
-  - [ ] Ported ingestion helpers (`parsePdf`, `chunkText`, `storeEmbeddings`) directly into the edge function; remove leftover unused server utilities.
-  - [ ] Implement request handler: receive storage path & document ID, download file from storage, run parsing/embedding, write chunks, update status.
-  - [ ] Add robust error handling and logging (Edge Function `console.log` + Supabase logs) with clear status updates.
+- [x] **Implement Edge Functions**
+  - [x] Stage worker (`ingest`) enqueues jobs and dispatches downstream workers.
+  - [x] Parse worker (`ingest-parse`) downloads, parses, and queues chunk jobs.
+  - [x] Embed worker (`ingest-embed`) processes chunk batches, writes vectors, and finalizes statuses.
+  - [x] Shared helpers module centralizes Supabase client, parsing, and embedding utilities.
 
-- [ ] **Refactor Next.js Upload Route**
-  - [ ] Trim `/api/ingest` to upload files, insert `documents` row (`pending`), and invoke the edge function asynchronously.
-  - [ ] Ensure client receives a quick response containing job ID / document ID for progress polling.
-  - [ ] Update any polling UI to rely on `/api/docs` status updates.
+- [x] **Refactor Next.js Upload Route**
+  - [x] Route now uploads, inserts metadata, and dispatches the staging worker asynchronously.
+  - [x] Error handling promotes failed dispatches to `status="error"` without crashing the request cycle.
+  - [ ] Update UI polling to surface chunk/job progress (follow-up).
 
 - [ ] **Testing & Validation**
   - [ ] Local end-to-end dry run using Supabase local dev or staging project: upload PDF/MD, verify statuses and `chunks`.
