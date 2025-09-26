@@ -110,42 +110,18 @@ export async function POST(request: Request) {
         size: file.size,
       } as const;
 
-      try {
-        const result = await supabaseService.functions.invoke("ingest", {
+      void supabaseService.functions
+        .invoke("ingest", {
           body: payload,
           headers: { Prefer: "resolution=async" },
+        })
+        .catch((invokeError) => {
+          console.error(
+            `Failed to invoke ingest edge function for document ${documentId}:`,
+            invokeError,
+          );
+          void markDocumentStatus(supabaseService, documentId, "error");
         });
-
-        if (result.error) {
-          console.error(
-            `Edge ingest failed for document ${documentId}:`,
-            result.error,
-          );
-          await markDocumentStatus(supabaseService, documentId, "error");
-          continue;
-        }
-
-        if (
-          typeof result.data === "object" &&
-          result.data !== null &&
-          "status" in result.data &&
-          (result.data as { status?: string }).status === "error"
-        ) {
-          console.error(
-            `Edge ingest returned error status for document ${documentId}:`,
-            result.data,
-          );
-          await markDocumentStatus(supabaseService, documentId, "error");
-          continue;
-        }
-      } catch (invokeError) {
-        console.error(
-          `Failed to invoke ingest edge function for document ${documentId}:`,
-          invokeError,
-        );
-        await markDocumentStatus(supabaseService, documentId, "error");
-        continue;
-      }
 
       jobIds.push(jobId);
     }
