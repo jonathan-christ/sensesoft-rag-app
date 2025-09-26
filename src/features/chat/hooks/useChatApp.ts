@@ -8,6 +8,7 @@ async function* parseSSEStream(response: Response) {
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let emittedContent = false;
   if (!reader) throw new Error("No response body");
   try {
     while (true) {
@@ -22,9 +23,14 @@ async function* parseSSEStream(response: Response) {
           try {
             const data = JSON.parse(line.slice(6));
             if (data.type === "token" && data.delta) {
+              emittedContent = true;
               yield data.delta as string;
             } else if (data.type === "final" && data.message) {
-              yield data.message.content as string;
+              const finalContent = data.message.content as string;
+              if (!emittedContent && finalContent) {
+                yield finalContent;
+                emittedContent = true;
+              }
               return;
             } else if (data.type === "done") {
               return;
@@ -33,6 +39,7 @@ async function* parseSSEStream(response: Response) {
             // ignore
           }
         } else if (line.trim()) {
+          emittedContent = true;
           yield line as string;
         }
       }

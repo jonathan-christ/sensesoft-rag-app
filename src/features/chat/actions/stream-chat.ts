@@ -63,6 +63,10 @@ export async function streamChat(
           }
         }
 
+        sendEvent({
+          type: "final",
+          message: { content: messageContent },
+        });
         sendEvent({ type: "done" });
         stream.end();
       },
