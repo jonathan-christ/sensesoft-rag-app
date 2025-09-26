@@ -8,10 +8,7 @@ import { CitationsPanel } from "@/features/chat/components/CitationsPanel";
 import { GlobalErrorBanner } from "@/features/chat/components/GlobalErrorBanner";
 import { ChatInput } from "@/features/chat/components/ChatInput";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
-import { MessageSquare, Send, Paperclip } from "lucide-react";
-import { Button } from "@/features/shared/components/ui/button";
-import { Input } from "@/features/shared/components/ui/input"; // Assuming this Input is the same as the one used in ChatInput
+import { MessageSquare } from "lucide-react";
 
 function ProtectedHomeAppInner({ initialChatId }: { initialChatId?: string }) {
   const ctx = useChatApp(initialChatId);
