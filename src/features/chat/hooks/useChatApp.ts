@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Message, ChatRow } from "@/lib/types";
 
+type ChatStreamEvent =
+  | { type: "delta"; data: string }
+  | { type: "final"; data: string }
+  | { type: "sources"; data: unknown }
+  | { type: "done" };
+
 // Backend is enabled in the page; mirror flag here to control streaming path if needed
 const USE_REAL_BACKEND = true;
 
-async function* parseSSEStream(response: Response) {
+async function* parseSSEStream(
+  response: Response,
+): AsyncGenerator<ChatStreamEvent, void, unknown> {
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -26,26 +34,32 @@ async function* parseSSEStream(response: Response) {
               const delta = data.delta as string;
               if (delta) {
                 emittedText += delta;
-                yield delta;
+                yield { type: "delta", data: delta } as const;
               }
             } else if (data.type === "final" && data.message) {
               const finalContent = data.message.content as string;
               if (finalContent) {
                 if (!finalContent.startsWith(emittedText)) {
                   // Fallback: emit the entire message if streaming diverged.
-                  yield finalContent;
+                  yield { type: "final", data: finalContent } as const;
                   emittedText = finalContent;
                 } else {
                   const remainder = finalContent.slice(emittedText.length);
                   if (remainder) {
                     emittedText += remainder;
-                    yield remainder;
+                    yield { type: "delta", data: remainder } as const;
                   }
                 }
+              } else {
+                yield { type: "final", data: emittedText } as const;
               }
+              yield { type: "done" } as const;
               return;
             } else if (data.type === "done") {
+              yield { type: "done" } as const;
               return;
+            } else if (data.type === "sources") {
+              yield { type: "sources", data: data.items } as const;
             }
           } catch {
             // ignore
@@ -53,7 +67,7 @@ async function* parseSSEStream(response: Response) {
         } else if (line.trim()) {
           const plain = line as string;
           emittedText += plain;
-          yield plain;
+          yield { type: "delta", data: plain } as const;
         }
       }
     }
@@ -299,7 +313,7 @@ export function useChatApp(initialChatId?: string) {
     async (messageId: string, userInput: string) => {
       try {
         let response:
-          | { stream: AsyncGenerator<string>; model: string }
+          | { stream: AsyncGenerator<ChatStreamEvent>; model: string }
           | undefined;
         if (USE_REAL_BACKEND) {
           const chatMessages: Message[] = messages
@@ -337,11 +351,24 @@ export function useChatApp(initialChatId?: string) {
         }
         if (!response) throw new Error("No response stream");
         let acc = "";
-        for await (const chunk of response.stream) {
-          acc += chunk;
-          setMessages((prev) =>
-            prev.map((m) => (m.id === messageId ? { ...m, content: acc } : m)),
-          );
+        for await (const evt of response.stream) {
+          if (evt.type === "delta") {
+            acc += evt.data;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId ? { ...m, content: acc } : m,
+              ),
+            );
+          } else if (evt.type === "final") {
+            acc = evt.data;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId ? { ...m, content: acc } : m,
+              ),
+            );
+          } else if (evt.type === "done") {
+            break;
+          }
         }
         setMessages((prev) =>
           prev.map((m) =>
