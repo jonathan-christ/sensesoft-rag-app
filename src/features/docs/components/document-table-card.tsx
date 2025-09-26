@@ -21,8 +21,9 @@ import {
   Loader2,
   RefreshCw,
 } from "lucide-react";
+import { ReactNode } from "react";
 
-const STATUS_ICONS: Record<string, JSX.Element> = {
+const STATUS_ICONS: Record<string, ReactNode> = {
   pending: <Clock className="size-3.5" />,
   processing: <Loader2 className="size-3.5 animate-spin" />,
   ready: <CheckCircle2 className="size-3.5" />,
