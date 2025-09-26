@@ -25,7 +25,7 @@ export interface StreamChatResponse {
 export interface ChatStreamOptions extends StreamChatRequest {
   model: string;
   onToken: (delta: string) => void;
-  onFinal?: (full: string) => void;
+  onFinal?: (full: string, meta?: { finishReason?: string }) => void;
   signal?: AbortSignal;
 }
 

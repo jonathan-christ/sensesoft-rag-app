@@ -10,7 +10,8 @@ import { buildPrompt } from "@/server/rag/prompt";
 export async function streamChat(
   req: StreamChatRequest & { chatId?: string; topK?: number },
 ): Promise<StreamChatResponse> {
-  const { messages, chatId, topK = 5, ...adapterPassthrough } = req;
+  const { messages, chatId, topK = 5, max_tokens, temperature } = req;
+  const maxTokens = max_tokens ?? 2048;
   const stream = new PassThrough();
 
   const latestMessage = messages[messages.length - 1];
@@ -35,7 +36,8 @@ export async function streamChat(
 
   try {
     await streamChatFromAdapter({
-      ...adapterPassthrough,
+      max_tokens: maxTokens,
+      temperature,
       messages: promptMessages,
       model: "gemini-2.5-flash",
       onToken: (delta: string) => {
@@ -44,7 +46,7 @@ export async function streamChat(
           sendEvent({ type: "token", delta });
         }
       },
-      onFinal: async (finalText: string) => {
+      onFinal: async (finalText: string, meta) => {
         const messageContent = finalText || fullResponse;
 
         if (chatId) {
@@ -61,6 +63,16 @@ export async function streamChat(
           } catch (dbError) {
             console.error("Error creating Supabase client:", dbError);
           }
+        }
+
+        const finishReason = meta?.finishReason?.toUpperCase();
+        const reachedLimit = finishReason?.includes("MAX");
+
+        if (reachedLimit) {
+          sendEvent({
+            type: "limit",
+            tokens: maxTokens,
+          });
         }
 
         sendEvent({

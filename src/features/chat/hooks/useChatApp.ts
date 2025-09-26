@@ -7,6 +7,7 @@ type ChatStreamEvent =
   | { type: "delta"; data: string }
   | { type: "final"; data: string }
   | { type: "sources"; data: unknown }
+  | { type: "limit"; data: { tokens: number } }
   | { type: "done" };
 
 // Backend is enabled in the page; mirror flag here to control streaming path if needed
@@ -57,11 +58,16 @@ async function* parseSSEStream(
               }
               yield { type: "done" } as const;
               return;
+            } else if (data.type === "limit") {
+              const tokens = typeof data.tokens === "number" ? data.tokens : 0;
+              if (tokens > 0) {
+                yield { type: "limit", data: { tokens } } as const;
+              }
+            } else if (data.type === "sources") {
+              yield { type: "sources", data: data.items } as const;
             } else if (data.type === "done") {
               yield { type: "done" } as const;
               return;
-            } else if (data.type === "sources") {
-              yield { type: "sources", data: data.items } as const;
             }
           } catch {
             // ignore
@@ -353,6 +359,7 @@ export function useChatApp(initialChatId?: string) {
         }
         if (!response) throw new Error("No response stream");
         let acc = "";
+        let limitTokens: number | null = null;
         for await (const evt of response.stream) {
           if (evt.type === "delta") {
             acc += evt.data;
@@ -366,6 +373,14 @@ export function useChatApp(initialChatId?: string) {
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === messageId ? { ...m, content: acc } : m,
+              ),
+            );
+          } else if (evt.type === "limit") {
+            limitTokens = evt.data.tokens;
+            const warning = `Response reached the ${limitTokens} token limit and may be incomplete.`;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId ? { ...m, _limitNotice: warning } : m,
               ),
             );
           } else if (evt.type === "done") {
@@ -389,6 +404,20 @@ export function useChatApp(initialChatId?: string) {
               ),
             );
           }
+        }
+
+        if (limitTokens) {
+          const warning = `Response reached the ${limitTokens} token limit and may be incomplete.`;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId
+                ? {
+                    ...m,
+                    _limitNotice: warning,
+                  }
+                : m,
+            ),
+          );
         }
       } catch (error) {
         throw error;

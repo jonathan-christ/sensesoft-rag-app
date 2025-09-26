@@ -57,6 +57,7 @@ export async function streamChat(opts: ChatStreamOptions): Promise<void> {
 
   const latestMessage = conversation[conversation.length - 1];
   const result = await chat.sendMessageStream(latestMessage?.content ?? "");
+  const responsePromise = result.response;
 
   let fullText = "";
   for await (const chunk of result.stream) {
@@ -67,8 +68,15 @@ export async function streamChat(opts: ChatStreamOptions): Promise<void> {
     fullText += text;
     onToken(text);
   }
+  let finishReason: string | undefined;
   if (onFinal) {
-    onFinal(fullText);
+    try {
+      const finalResponse = await responsePromise;
+      finishReason = finalResponse?.candidates?.[0]?.finishReason ?? undefined;
+    } catch (responseError) {
+      console.error("Failed to retrieve Gemini finish reason:", responseError);
+    }
+    onFinal(fullText, { finishReason });
   }
 }
 
