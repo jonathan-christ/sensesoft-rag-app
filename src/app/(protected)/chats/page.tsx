@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useChatApp } from "@/features/chat/hooks/useChatApp";
 import { ChatSidebar } from "@/features/chat/components/ChatSidebar";
 import { ChatHeader } from "@/features/chat/components/ChatHeader";
@@ -111,8 +111,8 @@ function ProtectedHomeAppInner({ initialChatId }: { initialChatId?: string }) {
                         Document Summary
                       </div>
                       <div className="text-xs text-gray-500">
-                        "Summarize the key points from the uploaded
-                        manual"
+                        &quot;Summarize the key points from the uploaded
+                        manual&quot;
                       </div>
                     </div>
                     <div
@@ -127,7 +127,7 @@ function ProtectedHomeAppInner({ initialChatId }: { initialChatId?: string }) {
                         Installation Guide
                       </div>
                       <div className="text-xs text-gray-500">
-                        "What are the installation requirements?"
+                        &quot;What are the installation requirements?&quot;
                       </div>
                     </div>
                     <div
@@ -142,7 +142,7 @@ function ProtectedHomeAppInner({ initialChatId }: { initialChatId?: string }) {
                         Feature Comparison
                       </div>
                       <div className="text-xs text-gray-500">
-                        "Compare features between product versions"
+                        &quot;Compare features between product versions&quot;
                       </div>
                     </div>
                     <div
@@ -157,8 +157,8 @@ function ProtectedHomeAppInner({ initialChatId }: { initialChatId?: string }) {
                         Technical Specs
                       </div>
                       <div className="text-xs text-gray-500">
-                        "Explain the technical specifications in
-                        detail"
+                        &quot;Explain the technical specifications in
+                        detail&quot;
                       </div>
                     </div>
                   </div>

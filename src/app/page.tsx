@@ -2,12 +2,10 @@
 import { useRouter } from "next/navigation";
 import React, { useEffect } from "react";
 
-type Props = {};
-
-export default function page({}: Props) {
+export default function Page() {
   const router = useRouter();
   useEffect(() => {
     router.push("/chats");
-  },[]);
+  },[router]);
   return <></>;
 }
