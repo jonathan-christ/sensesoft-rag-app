@@ -12,9 +12,7 @@ interface EmbedPayload {
   jobId: string;
 }
 
-const EMBED_BATCH_SIZE = Number(
-  Deno.env.get("INGEST_EMBED_BATCH_SIZE") ?? "8",
-);
+const EMBED_BATCH_SIZE = Number(Deno.env.get("INGEST_EMBED_BATCH_SIZE") ?? "8");
 
 async function queueNextBatch(jobId: string) {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/ingest-embed`, {
@@ -76,10 +74,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const {
-      data: chunkJobs,
-      error: chunkSelectError,
-    } = await supabase
+    const { data: chunkJobs, error: chunkSelectError } = await supabase
       .from("document_chunk_jobs")
       .select("id, chunk_index, content, status")
       .eq("document_job_id", jobId)

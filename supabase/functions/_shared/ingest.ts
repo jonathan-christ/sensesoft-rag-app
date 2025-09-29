@@ -119,17 +119,18 @@ async function markDocumentError(documentId: string, message: string) {
   }
 }
 
-async function markJobError(jobId: string, documentId: string, message: string) {
+async function markJobError(
+  jobId: string,
+  documentId: string,
+  message: string,
+) {
   try {
     await supabase
       .from("document_jobs")
       .update({ status: "error", error: message })
       .eq("id", jobId);
   } catch (error) {
-    console.error(
-      `Failed to mark job ${jobId} as error (${message})`,
-      error,
-    );
+    console.error(`Failed to mark job ${jobId} as error (${message})`, error);
   }
 
   await markDocumentError(documentId, message);

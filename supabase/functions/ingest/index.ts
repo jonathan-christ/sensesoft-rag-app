@@ -43,15 +43,8 @@ Deno.serve(async (req) => {
 
   try {
     payload = (await req.json()) as Partial<StagePayload>;
-    const {
-      jobId,
-      documentId,
-      storagePath,
-      userId,
-      filename,
-      mimeType,
-      size,
-    } = payload;
+    const { jobId, documentId, storagePath, userId, filename, mimeType, size } =
+      payload;
 
     if (
       !jobId ||

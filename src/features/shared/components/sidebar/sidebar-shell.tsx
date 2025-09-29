@@ -31,7 +31,7 @@ export default function SidebarShell({
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setAuthEmail(session?.user?.email ?? null);
-      }
+      },
     );
     return () => {
       mounted = false;

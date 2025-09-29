@@ -44,7 +44,9 @@ export default async function updateSession(request: NextRequest) {
 
   if (!user) {
     // If there's no user, and the current path is not a login/signup related path, redirect to login.
-    const isAuthPath = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/signup");
+    const isAuthPath =
+      request.nextUrl.pathname.startsWith("/login") ||
+      request.nextUrl.pathname.startsWith("/signup");
     if (!isAuthPath) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";

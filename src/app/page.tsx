@@ -6,6 +6,6 @@ export default function Page() {
   const router = useRouter();
   useEffect(() => {
     router.push("/chats");
-  },[router]);
+  }, [router]);
   return <></>;
 }
