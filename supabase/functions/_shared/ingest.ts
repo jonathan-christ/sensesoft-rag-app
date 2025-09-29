@@ -105,10 +105,43 @@ async function embedText(text: string): Promise<number[]> {
   return values;
 }
 
+async function markDocumentError(documentId: string, message: string) {
+  try {
+    await supabase
+      .from("documents")
+      .update({ status: "error" })
+      .eq("id", documentId);
+  } catch (error) {
+    console.error(
+      `Failed to mark document ${documentId} as error (${message})`,
+      error,
+    );
+  }
+}
+
+async function markJobError(
+  jobId: string,
+  documentId: string,
+  message: string,
+) {
+  try {
+    await supabase
+      .from("document_jobs")
+      .update({ status: "error", error: message })
+      .eq("id", jobId);
+  } catch (error) {
+    console.error(`Failed to mark job ${jobId} as error (${message})`, error);
+  }
+
+  await markDocumentError(documentId, message);
+}
+
 export {
   Buffer,
   EMBEDDING_DIM,
   EMBEDDING_MODEL,
+  markDocumentError,
+  markJobError,
   STORAGE_BUCKET,
   SUPABASE_SERVICE_ROLE_KEY,
   chunkText,

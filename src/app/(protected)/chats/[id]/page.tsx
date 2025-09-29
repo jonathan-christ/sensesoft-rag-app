@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import ChatApp from "../chat/page";
+import ProtectedHomeApp from "../page";
 
 interface ChatPageProps {
   params: {
@@ -60,5 +60,5 @@ export default function ChatPage({ params }: ChatPageProps) {
   }
 
   // Pass the chatId as a prop to ChatApp (we'll need to modify ChatApp to accept this)
-  return <ChatApp initialChatId={params.chatId} />;
+  return <ProtectedHomeApp initialChatId={params.chatId} />;
 }
