@@ -1,25 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Message, ChatRow } from "@/lib/types";
-
-import { syncLatestAssistantMessage } from "../lib/sync";
-
-type ChatStreamEvent =
-  | { type: "delta"; data: string }
-  | { type: "final"; data: string }
-  | { type: "sources"; data: unknown }
-  | { type: "limit"; data: { tokens: number } }
-  | { type: "done" };
+import type { Citation } from "@/features/chat/components/CitationsPanel";
 
 // Backend is enabled in the page; mirror flag here to control streaming path if needed
 const USE_REAL_BACKEND = true;
 
-async function* parseSSEStream(
-  response: Response,
-): AsyncGenerator<ChatStreamEvent, void, unknown> {
+async function* parseSSEStream(response: Response) {
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  let emittedText = "";
   if (!reader) throw new Error("No response body");
   try {
     while (true) {
@@ -34,48 +23,20 @@ async function* parseSSEStream(
           try {
             const data = JSON.parse(line.slice(6));
             if (data.type === "token" && data.delta) {
-              const delta = data.delta as string;
-              if (delta) {
-                emittedText += delta;
-                yield { type: "delta", data: delta } as const;
-              }
+              yield { type: "token", delta: data.delta as string };
+            } else if (data.type === "sources" && data.items) {
+              yield { type: "sources", items: data.items as Citation[] };
             } else if (data.type === "final" && data.message) {
-              const finalContent = data.message.content as string;
-              if (finalContent) {
-                if (!finalContent.startsWith(emittedText)) {
-                  // Fallback: emit the entire message if streaming diverged.
-                  yield { type: "final", data: finalContent } as const;
-                  emittedText = finalContent;
-                } else {
-                  const remainder = finalContent.slice(emittedText.length);
-                  if (remainder) {
-                    emittedText += remainder;
-                    yield { type: "delta", data: remainder } as const;
-                  }
-                }
-              } else {
-                yield { type: "final", data: emittedText } as const;
-              }
-              yield { type: "done" } as const;
+              yield { type: "final", content: data.message.content as string };
               return;
-            } else if (data.type === "limit") {
-              const tokens = typeof data.tokens === "number" ? data.tokens : 0;
-              if (tokens > 0) {
-                yield { type: "limit", data: { tokens } } as const;
-              }
-            } else if (data.type === "sources") {
-              yield { type: "sources", data: data.items } as const;
             } else if (data.type === "done") {
-              yield { type: "done" } as const;
               return;
             }
           } catch {
             // ignore
           }
         } else if (line.trim()) {
-          const plain = line as string;
-          emittedText += plain;
-          yield { type: "delta", data: plain } as const;
+          yield { type: "token", delta: line as string };
         }
       }
     }
@@ -95,6 +56,7 @@ export function useChatApp(initialChatId?: string) {
   const [renameValue, setRenameValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCitations, setShowCitations] = useState(false);
+  const [citations, setCitations] = useState<Citation[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingNewChat, setCreatingNewChat] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -203,9 +165,11 @@ export function useChatApp(initialChatId?: string) {
   useEffect(() => {
     if (activeChatId && !creatingNewChat) {
       setMessages([]);
+      setCitations([]); // Clear citations when switching chats
       loadMessages(activeChatId);
     } else if (!activeChatId) {
       setMessages([]);
+      setCitations([]);
     }
   }, [activeChatId, creatingNewChat, loadMessages]);
 
@@ -288,6 +252,7 @@ export function useChatApp(initialChatId?: string) {
             else {
               setActiveChatId("");
               setMessages([]);
+              setCitations([]);
             }
           }
         } else {
@@ -321,7 +286,14 @@ export function useChatApp(initialChatId?: string) {
     async (messageId: string, userInput: string) => {
       try {
         let response:
-          | { stream: AsyncGenerator<ChatStreamEvent>; model: string }
+          | {
+              stream: AsyncGenerator<{
+                type: string;
+                delta?: string;
+                items?: Citation[];
+              }>;
+              model: string;
+            }
           | undefined;
         if (USE_REAL_BACKEND) {
           const chatMessages: Message[] = messages
@@ -340,6 +312,7 @@ export function useChatApp(initialChatId?: string) {
             content: userInput,
             created_at: new Date().toISOString(),
           });
+
           const apiResponse = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -347,7 +320,7 @@ export function useChatApp(initialChatId?: string) {
               chatId: activeChatId,
               messages: chatMessages,
               temperature: 0.7,
-              max_tokens: 2048,
+              max_tokens: 1000,
             }),
           });
           if (!apiResponse.ok)
@@ -358,68 +331,36 @@ export function useChatApp(initialChatId?: string) {
           } as const;
         }
         if (!response) throw new Error("No response stream");
+
         let acc = "";
-        let limitTokens: number | null = null;
-        for await (const evt of response.stream) {
-          if (evt.type === "delta") {
-            acc += evt.data;
+        let newCitations: Citation[] = [];
+
+        for await (const event of response.stream) {
+          if (event.type === "token") {
+            acc += event.delta;
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === messageId ? { ...m, content: acc } : m,
               ),
             );
-          } else if (evt.type === "final") {
-            acc = evt.data;
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === messageId ? { ...m, content: acc } : m,
-              ),
-            );
-          } else if (evt.type === "limit") {
-            limitTokens = evt.data.tokens;
-            const warning = `Response reached the ${limitTokens} token limit and may be incomplete.`;
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === messageId ? { ...m, _limitNotice: warning } : m,
-              ),
-            );
-          } else if (evt.type === "done") {
-            break;
+          } else if (event.type === "sources" && event.items) {
+            // Handle citations from the stream
+            newCitations = event.items.map((item) => ({
+              chunkId: item.chunkId,
+              documentId: item.documentId,
+              filename: item.filename,
+              similarity: item.similarity,
+              content: undefined, // Content will be fetched by CitationsPanel if needed
+            }));
+            setCitations(newCitations);
           }
         }
+
         setMessages((prev) =>
           prev.map((m) =>
             m.id === messageId ? { ...m, _streaming: false } : m,
           ),
         );
-
-        if (activeChatId) {
-          const latestAssistant =
-            await syncLatestAssistantMessage(activeChatId);
-          if (latestAssistant) {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === messageId
-                  ? { ...m, content: latestAssistant.content }
-                  : m,
-              ),
-            );
-          }
-        }
-
-        if (limitTokens) {
-          const warning = `Response reached the ${limitTokens} token limit and may be incomplete.`;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === messageId
-                ? {
-                    ...m,
-                    _limitNotice: warning,
-                  }
-                : m,
-            ),
-          );
-        }
       } catch (error) {
         throw error;
       }
@@ -444,6 +385,9 @@ export function useChatApp(initialChatId?: string) {
     }
     setGlobalError(null);
     setSending(true);
+    // Clear previous citations when sending a new message
+    setCitations([]);
+
     const messageContent = input;
     const saved = await saveUserMessage(currentChatId, messageContent);
     const userMsg: Message = {
@@ -534,6 +478,7 @@ export function useChatApp(initialChatId?: string) {
     renameValue,
     searchQuery,
     showCitations,
+    citations,
     loading,
     creatingNewChat,
     bottomRef,
