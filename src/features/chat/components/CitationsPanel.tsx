@@ -115,7 +115,7 @@ export function CitationsPanel({
     if (groupedCitations.length > 0) {
       fetchDocumentDetails();
     }
-  }, [citations, groupedCitations, documentDetails]);
+  }, [citations, groupedCitations]);
 
   const toggleDocument = (documentId: string) => {
     setExpandedDocuments((prev) => {
