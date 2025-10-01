@@ -86,13 +86,15 @@ export function useChatApp(initialChatId?: string) {
       const response = await fetch(`/api/chats/${chatId}/messages`);
       if (response.ok) {
         const messagesData = await response.json();
-        const formattedMessages: Message[] = messagesData.map((msg: Message) => ({
-          id: msg.id,
-          chat_id: msg.chat_id,
-          role: msg.role,
-          content: msg.content,
-          created_at: msg.created_at,
-        }));
+        const formattedMessages: Message[] = messagesData.map(
+          (msg: Message) => ({
+            id: msg.id,
+            chat_id: msg.chat_id,
+            role: msg.role,
+            content: msg.content,
+            created_at: msg.created_at,
+          }),
+        );
         setMessages(formattedMessages);
       } else {
         setMessages([
@@ -176,9 +178,13 @@ export function useChatApp(initialChatId?: string) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const filteredChats = useMemo(() =>
-    chats.filter((chat) => chat.title.toLowerCase().includes(searchQuery.toLowerCase())),
-  [chats, searchQuery]);
+  const filteredChats = useMemo(
+    () =>
+      chats.filter((chat) =>
+        chat.title.toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
+    [chats, searchQuery],
+  );
 
   const createChat = useCallback(async () => {
     await createChatInBackend(`Chat ${chats.length + 1}`);
@@ -197,114 +203,170 @@ export function useChatApp(initialChatId?: string) {
     setRenameValue(chat.title);
   }, []);
 
-  const submitRename = useCallback(async (chatId: string) => {
-    if (!renameValue.trim()) {
-      setRenamingChatId(null);
-      return;
-    }
-    try {
-      const response = await fetch(`/api/chats/${chatId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: renameValue.trim() }),
-      });
-      if (response.ok) {
-        const updatedChat = await response.json();
-        setChats((prev) => prev.map((c) => (c.id === chatId ? { ...c, title: updatedChat.title } : c)));
-      } else {
-        console.error("Failed to rename chat");
+  const submitRename = useCallback(
+    async (chatId: string) => {
+      if (!renameValue.trim()) {
+        setRenamingChatId(null);
+        return;
       }
-    } catch (error) {
-      console.error("Error renaming chat:", error);
-    }
-    setRenamingChatId(null);
-  }, [renameValue]);
+      try {
+        const response = await fetch(`/api/chats/${chatId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: renameValue.trim() }),
+        });
+        if (response.ok) {
+          const updatedChat = await response.json();
+          setChats((prev) =>
+            prev.map((c) =>
+              c.id === chatId ? { ...c, title: updatedChat.title } : c,
+            ),
+          );
+        } else {
+          console.error("Failed to rename chat");
+        }
+      } catch (error) {
+        console.error("Error renaming chat:", error);
+      }
+      setRenamingChatId(null);
+    },
+    [renameValue],
+  );
 
   const switchChat = useCallback((chatId: string) => {
     setActiveChatId(chatId);
     setGlobalError(null);
   }, []);
 
-  const deleteChat = useCallback(async (chatId: string) => {
-    try {
-      const response = await fetch(`/api/chats/${chatId}`, { method: "DELETE" });
-      if (response.ok) {
-        setChats((prev) => prev.filter((c) => c.id !== chatId));
-        if (chatId === activeChatId) {
-          const remaining = chats.filter((c) => c.id !== chatId);
-          if (remaining.length > 0) setActiveChatId(remaining[0].id);
-          else {
-            setActiveChatId("");
-            setMessages([]);
-            setCitations([]);
+  const deleteChat = useCallback(
+    async (chatId: string) => {
+      try {
+        const response = await fetch(`/api/chats/${chatId}`, {
+          method: "DELETE",
+        });
+        if (response.ok) {
+          setChats((prev) => prev.filter((c) => c.id !== chatId));
+          if (chatId === activeChatId) {
+            const remaining = chats.filter((c) => c.id !== chatId);
+            if (remaining.length > 0) setActiveChatId(remaining[0].id);
+            else {
+              setActiveChatId("");
+              setMessages([]);
+              setCitations([]);
+            }
           }
+        } else {
+          console.error("Failed to delete chat");
         }
-      } else {
-        console.error("Failed to delete chat");
+      } catch (error) {
+        console.error("Error deleting chat:", error);
       }
-    } catch (error) {
-      console.error("Error deleting chat:", error);
-    }
-  }, [chats, activeChatId]);
+    },
+    [chats, activeChatId],
+  );
 
-  const saveUserMessage = useCallback(async (chatId: string, content: string) => {
-    try {
-      const response = await fetch(`/api/chats/${chatId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
-      });
-      if (response.ok) return await response.json();
-    } catch (error) {
-      console.error("Error saving user message:", error);
-    }
-    return null;
-  }, []);
-
-  const handleStreamingResponse = useCallback(async (messageId: string, userInput: string) => {
-    try {
-      let response: { stream: AsyncGenerator<{ type: string; delta?: string; items?: Citation[] }>; model: string } | undefined;
-      if (USE_REAL_BACKEND) {
-        const chatMessages: Message[] = messages
-          .filter((m) => !m._streaming && !m._error)
-          .map((m) => ({ id: m.id, chat_id: activeChatId, role: m.role, content: m.content, created_at: m.created_at }));
-        chatMessages.push({ id: `user-${Date.now()}`, chat_id: activeChatId, role: "user", content: userInput, created_at: new Date().toISOString() });
-        
-        const apiResponse = await fetch("/api/chat", {
+  const saveUserMessage = useCallback(
+    async (chatId: string, content: string) => {
+      try {
+        const response = await fetch(`/api/chats/${chatId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chatId: activeChatId, messages: chatMessages, temperature: 0.7, max_tokens: 1000 }),
+          body: JSON.stringify({ content }),
         });
-        if (!apiResponse.ok) throw new Error(`API call failed: ${apiResponse.status}`);
-        response = { stream: parseSSEStream(apiResponse), model: "gemini-2.5-flash" } as const;
+        if (response.ok) return await response.json();
+      } catch (error) {
+        console.error("Error saving user message:", error);
       }
-      if (!response) throw new Error("No response stream");
-      
-      let acc = "";
-      let newCitations: Citation[] = [];
-      
-      for await (const event of response.stream) {
-        if (event.type === "token") {
-          acc += event.delta;
-          setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, content: acc } : m)));
-        } else if (event.type === "sources" && event.items) {
-          // Handle citations from the stream
-          newCitations = event.items.map((item) => ({
-            chunkId: item.chunkId,
-            documentId: item.documentId,
-            filename: item.filename,
-            similarity: item.similarity,
-            content: undefined // Content will be fetched by CitationsPanel if needed
-          }));
-          setCitations(newCitations);
+      return null;
+    },
+    [],
+  );
+
+  const handleStreamingResponse = useCallback(
+    async (messageId: string, userInput: string) => {
+      try {
+        let response:
+          | {
+              stream: AsyncGenerator<{
+                type: string;
+                delta?: string;
+                items?: Citation[];
+              }>;
+              model: string;
+            }
+          | undefined;
+        if (USE_REAL_BACKEND) {
+          const chatMessages: Message[] = messages
+            .filter((m) => !m._streaming && !m._error)
+            .map((m) => ({
+              id: m.id,
+              chat_id: activeChatId,
+              role: m.role,
+              content: m.content,
+              created_at: m.created_at,
+            }));
+          chatMessages.push({
+            id: `user-${Date.now()}`,
+            chat_id: activeChatId,
+            role: "user",
+            content: userInput,
+            created_at: new Date().toISOString(),
+          });
+
+          const apiResponse = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chatId: activeChatId,
+              messages: chatMessages,
+              temperature: 0.7,
+              max_tokens: 1000,
+            }),
+          });
+          if (!apiResponse.ok)
+            throw new Error(`API call failed: ${apiResponse.status}`);
+          response = {
+            stream: parseSSEStream(apiResponse),
+            model: "gemini-2.5-flash",
+          } as const;
         }
+        if (!response) throw new Error("No response stream");
+
+        let acc = "";
+        let newCitations: Citation[] = [];
+
+        for await (const event of response.stream) {
+          if (event.type === "token") {
+            acc += event.delta;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId ? { ...m, content: acc } : m,
+              ),
+            );
+          } else if (event.type === "sources" && event.items) {
+            // Handle citations from the stream
+            newCitations = event.items.map((item) => ({
+              chunkId: item.chunkId,
+              documentId: item.documentId,
+              filename: item.filename,
+              similarity: item.similarity,
+              content: undefined, // Content will be fetched by CitationsPanel if needed
+            }));
+            setCitations(newCitations);
+          }
+        }
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId ? { ...m, _streaming: false } : m,
+          ),
+        );
+      } catch (error) {
+        throw error;
       }
-      
-      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, _streaming: false } : m)));
-    } catch (error) {
-      throw error;
-    }
-  }, [messages, activeChatId]);
+    },
+    [messages, activeChatId],
+  );
 
   const sendMessage = useCallback(async () => {
     if (!input.trim() || sending) return;
@@ -312,7 +374,10 @@ export function useChatApp(initialChatId?: string) {
     if (!currentChatId) {
       setCreatingNewChat(true);
       const newChat = await createChatInBackend("New Chat");
-      if (!newChat) { setCreatingNewChat(false); return; }
+      if (!newChat) {
+        setCreatingNewChat(false);
+        return;
+      }
       currentChatId = newChat.id;
       setActiveChatId(newChat.id);
       setChats((prev) => [newChat, ...prev]);
@@ -322,45 +387,117 @@ export function useChatApp(initialChatId?: string) {
     setSending(true);
     // Clear previous citations when sending a new message
     setCitations([]);
-    
+
     const messageContent = input;
     const saved = await saveUserMessage(currentChatId, messageContent);
-    const userMsg: Message = { id: saved?.id || `user-${Date.now()}`,
-      chat_id: currentChatId, role: "user", content: messageContent, created_at: saved?.created_at || new Date().toISOString() };
-    const assistantMsg: Message = { id: `assistant-${Date.now()}`, chat_id: currentChatId, role: "assistant", content: "", created_at: new Date().toISOString(), _streaming: true };
+    const userMsg: Message = {
+      id: saved?.id || `user-${Date.now()}`,
+      chat_id: currentChatId,
+      role: "user",
+      content: messageContent,
+      created_at: saved?.created_at || new Date().toISOString(),
+    };
+    const assistantMsg: Message = {
+      id: `assistant-${Date.now()}`,
+      chat_id: currentChatId,
+      role: "assistant",
+      content: "",
+      created_at: new Date().toISOString(),
+      _streaming: true,
+    };
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
     const currentInput = input;
     setInput("");
     try {
       await handleStreamingResponse(assistantMsg.id, currentInput);
     } catch {
-      setMessages((prev) => prev.map((m) => m.id === assistantMsg.id ? { ...m, _streaming: false, _error: "Failed to get response. Please try again." } : m));
-      setGlobalError("Connection error. Please check your internet connection.");
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsg.id
+            ? {
+                ...m,
+                _streaming: false,
+                _error: "Failed to get response. Please try again.",
+              }
+            : m,
+        ),
+      );
+      setGlobalError(
+        "Connection error. Please check your internet connection.",
+      );
     } finally {
       setSending(false);
     }
-  }, [input, sending, activeChatId, saveUserMessage, handleStreamingResponse, createChatInBackend]);
+  }, [
+    input,
+    sending,
+    activeChatId,
+    saveUserMessage,
+    handleStreamingResponse,
+    createChatInBackend,
+  ]);
 
-  const retryMessage = useCallback((messageId: string) => {
-    const message = messages.find((m) => m.id === messageId);
-    if (!message?._error) return;
-    setMessages((prev) => prev.map((m) => m.id === messageId ? { ...m, _error: undefined, _streaming: true, content: "" } : m));
-    handleStreamingResponse(messageId, "retry request").catch(() => {
-      setMessages((prev) => prev.map((m) => m.id === messageId ? { ...m, _streaming: false, _error: "Retry failed" } : m));
-    });
-  }, [messages, handleStreamingResponse]);
+  const retryMessage = useCallback(
+    (messageId: string) => {
+      const message = messages.find((m) => m.id === messageId);
+      if (!message?._error) return;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? { ...m, _error: undefined, _streaming: true, content: "" }
+            : m,
+        ),
+      );
+      handleStreamingResponse(messageId, "retry request").catch(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId
+              ? { ...m, _streaming: false, _error: "Retry failed" }
+              : m,
+          ),
+        );
+      });
+    },
+    [messages, handleStreamingResponse],
+  );
 
-  const activeChat = useMemo(() => chats.find((c) => c.id === activeChatId), [chats, activeChatId]);
+  const activeChat = useMemo(
+    () => chats.find((c) => c.id === activeChatId),
+    [chats, activeChatId],
+  );
 
   return {
     // state
-    chats, activeChatId, messages, input, sending, globalError, renamingChatId, renameValue,
-    searchQuery, showCitations, citations, loading, creatingNewChat,
-    bottomRef, filteredChats, activeChat,
+    chats,
+    activeChatId,
+    messages,
+    input,
+    sending,
+    globalError,
+    renamingChatId,
+    renameValue,
+    searchQuery,
+    showCitations,
+    citations,
+    loading,
+    creatingNewChat,
+    bottomRef,
+    filteredChats,
+    activeChat,
     // setters
-    setInput, setSearchQuery, setRenameValue, setShowCitations, setGlobalError,
+    setInput,
+    setSearchQuery,
+    setRenameValue,
+    setShowCitations,
+    setGlobalError,
     // actions
-    beginRename, submitRename, switchChat, deleteChat, createChat, saveAsNewChat,
-    retryMessage, sendMessage,
+    beginRename,
+    submitRename,
+    switchChat,
+    deleteChat,
+    createChat,
+    saveAsNewChat,
+    retryMessage,
+    sendMessage,
   } as const;
 }

@@ -18,7 +18,8 @@ export const metadata: Metadata = {
     default: "Akkodis AI",
     template: "%s | Akkodis AI",
   },
-  description: "Akkodis AI – chat with and search your documents using Retrieval Augmented Generation.",
+  description:
+    "Akkodis AI – chat with and search your documents using Retrieval Augmented Generation.",
   icons: {
     icon: "/akkodis_logo_small.svg",
     shortcut: "/akkodis_logo_small.svg",

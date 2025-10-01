@@ -11,19 +11,23 @@ import { ResizableSplitter } from "@/features/shared/components/ui/resizable-spl
 import { useRouter, useSearchParams } from "next/navigation";
 import { MessageSquare } from "lucide-react";
 
-function ProtectedHomeAppContent({ initialChatId }: { initialChatId?: string }) {
+function ProtectedHomeAppContent({
+  initialChatId,
+}: {
+  initialChatId?: string;
+}) {
   const ctx = useChatApp(initialChatId);
   const router = useRouter();
   const searchParams = useSearchParams();
   const sentInitial = useRef(false);
   const initialMessage = searchParams.get("message");
-  
+
   // State for citations panel width
   const [citationsPanelWidth, setCitationsPanelWidth] = useState(320);
 
   // Load saved width from localStorage
   useEffect(() => {
-    const savedWidth = localStorage.getItem('citationsPanelWidth');
+    const savedWidth = localStorage.getItem("citationsPanelWidth");
     if (savedWidth) {
       const width = parseInt(savedWidth, 10);
       if (width >= 250 && width <= 600) {
@@ -35,7 +39,7 @@ function ProtectedHomeAppContent({ initialChatId }: { initialChatId?: string }) 
   // Save width to localStorage when it changes
   const handleWidthChange = (width: number) => {
     setCitationsPanelWidth(width);
-    localStorage.setItem('citationsPanelWidth', width.toString());
+    localStorage.setItem("citationsPanelWidth", width.toString());
   };
 
   useEffect(() => {
@@ -230,14 +234,16 @@ function ProtectedHomeAppContent({ initialChatId }: { initialChatId?: string }) 
 
 function ProtectedHomeAppInner({ initialChatId }: { initialChatId?: string }) {
   return (
-    <Suspense fallback={
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading...</p>
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <ProtectedHomeAppContent initialChatId={initialChatId} />
     </Suspense>
   );
