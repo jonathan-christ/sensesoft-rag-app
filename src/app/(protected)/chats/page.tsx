@@ -26,7 +26,7 @@ function ProtectedHomeAppContent({ initialChatId }: { initialChatId?: string }) 
     const savedWidth = localStorage.getItem('citationsPanelWidth');
     if (savedWidth) {
       const width = parseInt(savedWidth, 10);
-      if (width >= 200 && width <= 600) {
+      if (width >= 250 && width <= 600) {
         setCitationsPanelWidth(width);
       }
     }
@@ -99,7 +99,7 @@ function ProtectedHomeAppContent({ initialChatId }: { initialChatId?: string }) 
         <ResizableSplitter
           showRightPanel={ctx.showCitations}
           initialWidth={citationsPanelWidth}
-          minWidth={200}
+          minWidth={250}
           maxWidth={600}
           onWidthChange={handleWidthChange}
           className="flex-1"

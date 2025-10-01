@@ -121,21 +121,21 @@ export function CitationsPanel({ show, messagesLength, backendLabel, citations =
 
   return (
     <div className="border-l border-border bg-card flex flex-col h-full min-h-0 w-full">
-      <div className="p-4 border-b border-border sticky top-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Sources</h3>
-          <div className="text-sm text-muted-foreground">
+      <div className="p-3 border-b border-border sticky top-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-base font-semibold flex-shrink-0">Sources</h3>
+          <div className="text-xs text-muted-foreground text-right">
             {citations.length} citation{citations.length !== 1 ? 's' : ''}
           </div>
         </div>
         {backendLabel && (
-          <div className="text-xs text-muted-foreground mt-1">
+          <div className="text-xs text-muted-foreground mt-1 break-words">
             Powered by {backendLabel}
           </div>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {citations.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
             <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -154,26 +154,28 @@ export function CitationsPanel({ show, messagesLength, backendLabel, citations =
               const isExpanded = expandedDocuments.has(docGroup.documentId);
               
               return (
-                <Card key={docGroup.documentId} className="p-3">
+                <Card key={docGroup.documentId} className="p-2">
                   <div className="space-y-2">
                     {/* Document Header */}
                     <div 
-                      className="flex items-center justify-between cursor-pointer"
+                      className="flex items-start gap-2 cursor-pointer"
                       onClick={() => toggleDocument(docGroup.documentId)}
                     >
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <FileText className="w-4 h-4 text-primary flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium truncate">
-                            {docDetails?.filename || docGroup.filename || 'Unknown Document'}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {docGroup.chunks.length} reference{docGroup.chunks.length !== 1 ? 's' : ''}
-                            {docDetails?.chunk_count && ` • ${docDetails.chunk_count} total chunks`}
-                          </div>
+                      <FileText className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium break-words leading-tight">
+                          {docDetails?.filename || docGroup.filename || 'Unknown Document'}
+                        </div>
+                        <div className="text-xs text-muted-foreground break-words">
+                          {docGroup.chunks.length} reference{docGroup.chunks.length !== 1 ? 's' : ''}
+                          {docDetails?.chunk_count && (
+                            <span className="block sm:inline">
+                              {docGroup.chunks.length > 0 && ' • '}{docDetails.chunk_count} total chunks
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 flex-shrink-0">
                         {docDetails && (
                           <Button 
                             variant="ghost" 
@@ -194,21 +196,23 @@ export function CitationsPanel({ show, messagesLength, backendLabel, citations =
 
                     {/* Expanded Content */}
                     {isExpanded && (
-                      <div className="space-y-2 pl-6">
+                      <div className="space-y-2 pl-4">
                         {docGroup.chunks.map((chunk) => (
                           <div key={chunk.chunkId} className="bg-muted/50 rounded p-2 text-xs">
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="font-mono text-primary">
-                                Chunk #{chunk.chunkId}
-                              </span>
-                              {chunk.similarity && (
-                                <span className="text-muted-foreground">
-                                  {formatSimilarity(chunk.similarity)} match
+                            <div className="flex flex-col gap-1 mb-1">
+                              <div className="flex justify-between items-center">
+                                <span className="font-mono text-primary text-xs">
+                                  Chunk #{chunk.chunkId}
                                 </span>
-                              )}
+                                {chunk.similarity && (
+                                  <span className="text-muted-foreground text-xs flex-shrink-0">
+                                    {formatSimilarity(chunk.similarity)} match
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             {chunk.content && (
-                              <div className="text-muted-foreground leading-relaxed">
+                              <div className="text-muted-foreground leading-relaxed break-words">
                                 {truncateContent(chunk.content)}
                               </div>
                             )}
@@ -226,7 +230,7 @@ export function CitationsPanel({ show, messagesLength, backendLabel, citations =
 
       {/* Footer */}
       {citations.length > 0 && (
-        <div className="p-4 border-t border-border text-xs text-muted-foreground">
+        <div className="p-3 border-t border-border text-xs text-muted-foreground break-words">
           Citations are ranked by relevance to your query
         </div>
       )}
