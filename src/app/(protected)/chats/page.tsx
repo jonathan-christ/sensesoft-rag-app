@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, Suspense } from "react";
 import { useChatApp } from "@/features/chat/hooks/useChatApp";
 import { ChatSidebar } from "@/features/chat/components/ChatSidebar";
 import { ChatHeader } from "@/features/chat/components/ChatHeader";
@@ -10,7 +10,7 @@ import { ChatInput } from "@/features/chat/components/ChatInput";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MessageSquare } from "lucide-react";
 
-function ProtectedHomeAppInner({ initialChatId }: { initialChatId?: string }) {
+function ProtectedHomeAppContent({ initialChatId }: { initialChatId?: string }) {
   const ctx = useChatApp(initialChatId);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -177,6 +177,7 @@ function ProtectedHomeAppInner({ initialChatId }: { initialChatId?: string }) {
             show={ctx.showCitations}
             messagesLength={ctx.messages.length}
             backendLabel={"Gemini API"}
+            citations={ctx.citations || []}
           />
         </div>
 
@@ -196,6 +197,21 @@ function ProtectedHomeAppInner({ initialChatId }: { initialChatId?: string }) {
         />
       </div>
     </div>
+  );
+}
+
+function ProtectedHomeAppInner({ initialChatId }: { initialChatId?: string }) {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ProtectedHomeAppContent initialChatId={initialChatId} />
+    </Suspense>
   );
 }
 

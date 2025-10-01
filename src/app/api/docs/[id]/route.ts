@@ -3,8 +3,9 @@ import { createClient } from "@/features/auth/lib/supabase/server";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id: documentId } = await params;
   try {
     const supabase = await createClient();
     const {
@@ -14,8 +15,6 @@ export async function GET(
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const documentId = params.id;
 
     const { data: document, error: documentError } = await supabase
       .from("documents")
@@ -67,8 +66,9 @@ export async function GET(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id: documentId } = await params;
   try {
     const supabase = await createClient();
     const {
@@ -78,8 +78,6 @@ export async function DELETE(
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const documentId = params.id;
 
     // Fetch storage_path from document_jobs
     const { data: documentJob, error: documentJobError } = await supabase
@@ -172,8 +170,9 @@ export async function DELETE(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id: documentId } = await params;
   try {
     const supabase = await createClient();
     const {
@@ -183,8 +182,6 @@ export async function PATCH(
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const documentId = params.id;
     const { filename } = await req.json();
 
     if (!filename) {
