@@ -120,7 +120,7 @@ export function CitationsPanel({ show, messagesLength, backendLabel, citations =
   }
 
   return (
-    <div className="w-80 border-l border-border bg-card flex flex-col h-full min-h-0">
+    <div className="border-l border-border bg-card flex flex-col h-full min-h-0 w-full">
       <div className="p-4 border-b border-border sticky top-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Sources</h3>
