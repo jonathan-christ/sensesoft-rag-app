@@ -13,12 +13,20 @@ export interface Chat {
   updated_at: string;
 }
 
+export interface Citation {
+  chunkId: number;
+  documentId: string;
+  filename?: string;
+  similarity?: number;
+}
+
 export interface Message {
   id: string;
   chat_id: string;
   role: "user" | "assistant" | "system";
   content: string;
   created_at: string;
+  citations?: Citation[]; // citations specific to this message
   _streaming?: boolean; // true = content still being generated, false = final content received
   _error?: string; // error message if generation failed
   _limitNotice?: string; // warning when response hit token limit
