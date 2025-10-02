@@ -32,48 +32,5 @@ export async function searchRelevantChunks(
     return [];
   }
 
-  if (!data) {
-    return [];
-  }
-
-  const missingFilenameIds = Array.from(
-    new Set(
-      data
-        .filter((chunk) => !chunk.filename || chunk.filename.trim().length === 0)
-        .map((chunk) => chunk.document_id),
-    ),
-  );
-
-  if (missingFilenameIds.length > 0) {
-    const { data: documents, error: docError } = await supabase
-      .from("documents")
-      .select("id, filename")
-      .in("id", missingFilenameIds);
-
-    if (docError) {
-      console.warn("Failed to backfill filenames for citations", docError);
-    }
-
-    const filenameLookup = new Map(
-      (documents ?? []).map((doc) => [doc.id, doc.filename ?? ""]),
-    );
-
-    return data.map((chunk) => {
-      if (chunk.filename && chunk.filename.trim().length > 0) {
-        return chunk;
-      }
-
-      const lookupValue = filenameLookup.get(chunk.document_id);
-      const fallback = lookupValue && lookupValue.trim().length > 0
-        ? lookupValue
-        : chunk.document_id;
-
-      return {
-        ...chunk,
-        filename: fallback,
-      };
-    });
-  }
-
-  return data;
+  return data ?? [];
 }
