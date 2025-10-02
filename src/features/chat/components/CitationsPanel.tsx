@@ -1,20 +1,103 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/features/shared/components/ui/button";
 import { Card } from "@/features/shared/components/ui/card";
-import {
-  FileText,
-  ExternalLink,
-  ChevronDown,
-  ChevronRight,
-} from "lucide-react";
+import { FileText } from "lucide-react";
+import type { Citation } from "@/lib/types";
 
-export interface Citation {
-  chunkId: number;
+// Utility component for hoverable document references
+export function DocumentReferenceTooltip({
+  reference,
+  documentName,
+  className = "",
+}: {
+  reference: string;
+  documentName: string;
+  className?: string;
+}) {
+  return (
+    <span
+      className={`inline-block px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-mono cursor-help border border-blue-200 hover:bg-blue-200 transition-colors ${className}`}
+      title={documentName}
+    >
+      {reference}
+    </span>
+  );
+}
+
+// Utility function to parse text and make document references hoverable
+export function parseDocumentReferences(
+  text: string,
+  citations: Citation[],
+): React.ReactNode[] {
+  if (!citations || citations.length === 0) {
+    return [text];
+  }
+
+  // Create reference mapping that matches the prompt building logic (group by document)
+  const referenceMap = new Map<
+    string,
+    { documentName: string; documentId: string }
+  >();
+  const documentGroups = new Map<
+    string,
+    { filename?: string; referenceNumber: number }
+  >();
+
+  // First pass: group citations by document ID and assign reference numbers
+  citations.forEach((citation) => {
+    if (!documentGroups.has(citation.documentId)) {
+      const referenceNumber = documentGroups.size + 1;
+      documentGroups.set(citation.documentId, {
+        filename: citation.filename,
+        referenceNumber,
+      });
+    }
+  });
+
+  // Second pass: create reference mapping
+  documentGroups.forEach((group, documentId) => {
+    if (group.filename) {
+      const extension =
+        group.filename.split(".").pop()?.toUpperCase() || "FILE";
+      const filename = group.filename.split("/").pop() || group.filename;
+      referenceMap.set(`[${extension}${group.referenceNumber}]`, {
+        documentName: filename,
+        documentId: documentId,
+      });
+    }
+
+    // Also handle fallback references with document ID
+    const shortId = documentId.substring(0, 8);
+    referenceMap.set(`[Doc-${shortId}]`, {
+      documentName: group.filename || "Unknown Document",
+      documentId: documentId,
+    });
+  });
+
+  // Pattern to match document references like [PDF1], [DOCX2], [Doc-abc12345]
+  const referencePattern = /(\[[^\]]+\])/g;
+  const parts = text.split(referencePattern);
+
+  return parts.map((part, index) => {
+    const referenceInfo = referenceMap.get(part);
+    if (referenceInfo) {
+      return (
+        <DocumentReferenceTooltip
+          key={`${referenceInfo.documentId}-${index}`}
+          reference={part}
+          documentName={referenceInfo.documentName}
+        />
+      );
+    }
+    return part;
+  });
+}
+
+interface HoverableReference {
+  reference: string;
+  documentName: string;
   documentId: string;
-  filename?: string;
-  similarity?: number;
-  content?: string;
 }
 
 interface CitationsPanelProps {
@@ -24,25 +107,12 @@ interface CitationsPanelProps {
   citations?: Citation[];
 }
 
-interface DocumentCitations {
-  documentId: string;
-  filename?: string;
-  chunks: Array<{
-    chunkId: number;
-    similarity?: number;
-    content?: string;
-  }>;
-}
-
 export function CitationsPanel({
   show,
   messagesLength,
   backendLabel,
   citations = [],
 }: CitationsPanelProps) {
-  const [expandedDocuments, setExpandedDocuments] = useState<Set<string>>(
-    new Set(),
-  );
   const [documentDetails, setDocumentDetails] = useState<
     Map<
       string,
@@ -58,34 +128,27 @@ export function CitationsPanel({
     >
   >(new Map());
 
-  // Group citations by document
-  const groupedCitations: DocumentCitations[] = citations.reduce(
-    (acc, citation) => {
-      const existing = acc.find(
-        (doc) => doc.documentId === citation.documentId,
-      );
-      if (existing) {
-        existing.chunks.push({
-          chunkId: citation.chunkId,
-          similarity: citation.similarity,
-          content: citation.content,
-        });
-      } else {
-        acc.push({
+  // Group citations by document (simplified - just show unique documents)
+  const uniqueDocuments = Array.from(
+    new Map(
+      citations.map((citation) => [
+        citation.documentId,
+        {
           documentId: citation.documentId,
           filename: citation.filename,
-          chunks: [
-            {
-              chunkId: citation.chunkId,
-              similarity: citation.similarity,
-              content: citation.content,
-            },
-          ],
-        });
-      }
-      return acc;
-    },
-    [] as DocumentCitations[],
+          // Calculate average similarity for the document
+          avgSimilarity:
+            citations
+              .filter((c) => c.documentId === citation.documentId)
+              .reduce((sum, c) => sum + (c.similarity || 0), 0) /
+            citations.filter((c) => c.documentId === citation.documentId)
+              .length,
+          referenceCount: citations.filter(
+            (c) => c.documentId === citation.documentId,
+          ).length,
+        },
+      ]),
+    ).values(),
   );
 
   // Fetch document details when citations change
@@ -93,13 +156,13 @@ export function CitationsPanel({
     const fetchDocumentDetails = async () => {
       const newDetails = new Map();
 
-      for (const group of groupedCitations) {
-        if (!documentDetails.has(group.documentId)) {
+      for (const doc of uniqueDocuments) {
+        if (!documentDetails.has(doc.documentId)) {
           try {
-            const response = await fetch(`/api/docs/${group.documentId}`);
+            const response = await fetch(`/api/docs/${doc.documentId}`);
             if (response.ok) {
               const docData = await response.json();
-              newDetails.set(group.documentId, docData);
+              newDetails.set(doc.documentId, docData);
             }
           } catch (error) {
             console.error("Failed to fetch document details:", error);
@@ -112,34 +175,78 @@ export function CitationsPanel({
       }
     };
 
-    if (groupedCitations.length > 0) {
+    if (uniqueDocuments.length > 0) {
       fetchDocumentDetails();
     }
-  }, [citations, groupedCitations]);
-
-  const toggleDocument = (documentId: string) => {
-    setExpandedDocuments((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(documentId)) {
-        newSet.delete(documentId);
-      } else {
-        newSet.add(documentId);
-      }
-      return newSet;
-    });
-  };
+  }, [citations, uniqueDocuments]);
 
   const formatSimilarity = (similarity?: number) => {
     if (!similarity) return "";
     return `${Math.round(similarity * 100)}%`;
   };
 
-  const truncateContent = (content?: string, maxLength = 200) => {
-    if (!content) return "";
-    return content.length > maxLength
-      ? content.substring(0, maxLength) + "..."
-      : content;
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return "";
+    const units = ["B", "KB", "MB", "GB"];
+    let size = bytes;
+    let unitIndex = 0;
+
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+
+    return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
   };
+
+  // Function to create document reference mapping for hover functionality
+  const createReferenceMapping = (): Map<string, HoverableReference> => {
+    const mapping = new Map<string, HoverableReference>();
+
+    uniqueDocuments.forEach((doc) => {
+      const docDetails = documentDetails.get(doc.documentId);
+      const filename = docDetails?.filename || doc.filename;
+
+      if (filename) {
+        // Extract file extension for reference
+        const extension = filename.split(".").pop()?.toUpperCase() || "FILE";
+        const name = filename.split("/").pop() || filename;
+
+        // Create different possible reference formats that might appear in text
+        const shortName = name.split(".")[0];
+        const truncatedName =
+          shortName.length > 15
+            ? shortName.substring(0, 15) + "..."
+            : shortName;
+
+        // Map various possible reference formats to document info
+        mapping.set(`[${extension}]`, {
+          reference: `[${extension}]`,
+          documentName: name,
+          documentId: doc.documentId,
+        });
+
+        mapping.set(`[${truncatedName}]`, {
+          reference: `[${truncatedName}]`,
+          documentName: name,
+          documentId: doc.documentId,
+        });
+      }
+
+      // Fallback mapping for document ID based references
+      const shortId = doc.documentId.substring(0, 8);
+      mapping.set(`[Doc-${shortId}]`, {
+        reference: `[Doc-${shortId}]`,
+        documentName:
+          docDetails?.filename || doc.filename || "Unknown Document",
+        documentId: doc.documentId,
+      });
+    });
+
+    return mapping;
+  };
+
+  const referenceMapping = createReferenceMapping();
 
   if (!show) {
     return null;
@@ -174,84 +281,45 @@ export function CitationsPanel({
           </div>
         ) : (
           <div className="space-y-3">
-            {groupedCitations.map((docGroup) => {
-              const docDetails = documentDetails.get(docGroup.documentId);
-              const isExpanded = expandedDocuments.has(docGroup.documentId);
+            {uniqueDocuments.map((doc) => {
+              const docDetails = documentDetails.get(doc.documentId);
 
               return (
-                <Card key={docGroup.documentId} className="p-2">
-                  <div className="space-y-2">
-                    {/* Document Header */}
-                    <div
-                      className="flex items-start gap-2 cursor-pointer"
-                      onClick={() => toggleDocument(docGroup.documentId)}
-                    >
-                      <FileText className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium break-words leading-tight">
-                          {docDetails?.filename ||
-                            docGroup.filename ||
-                            "Unknown Document"}
-                        </div>
-                        <div className="text-xs text-muted-foreground break-words">
-                          {docGroup.chunks.length} reference
-                          {docGroup.chunks.length !== 1 ? "s" : ""}
-                          {docDetails?.chunk_count && (
-                            <span className="block sm:inline">
-                              {docGroup.chunks.length > 0 && " • "}
-                              {docDetails.chunk_count} total chunks
+                <Card key={doc.documentId} className="p-3">
+                  <div className="flex items-start gap-3">
+                    <FileText className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium break-words leading-tight">
+                        {docDetails?.filename ||
+                          doc.filename ||
+                          "Unknown Document"}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 break-words">
+                        Used {doc.referenceCount} time
+                        {doc.referenceCount !== 1 ? "s" : ""} in response
+                        {doc.avgSimilarity > 0 && (
+                          <span className="block sm:inline">
+                            {" • "}
+                            {formatSimilarity(doc.avgSimilarity)} relevance
+                          </span>
+                        )}
+                      </div>
+                      {docDetails && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {docDetails.mime_type && (
+                            <span className="capitalize">
+                              {docDetails.mime_type.split("/")[1]} file
+                            </span>
+                          )}
+                          {docDetails.size_bytes && (
+                            <span>
+                              {" • "}
+                              {formatFileSize(docDetails.size_bytes)}
                             </span>
                           )}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        {docDetails && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            title="View document details"
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                          </Button>
-                        )}
-                        {isExpanded ? (
-                          <ChevronDown className="w-4 h-4" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4" />
-                        )}
-                      </div>
+                      )}
                     </div>
-
-                    {/* Expanded Content */}
-                    {isExpanded && (
-                      <div className="space-y-2 pl-4">
-                        {docGroup.chunks.map((chunk) => (
-                          <div
-                            key={chunk.chunkId}
-                            className="bg-muted/50 rounded p-2 text-xs"
-                          >
-                            <div className="flex flex-col gap-1 mb-1">
-                              <div className="flex justify-between items-center">
-                                <span className="font-mono text-primary text-xs">
-                                  Chunk #{chunk.chunkId}
-                                </span>
-                                {chunk.similarity && (
-                                  <span className="text-muted-foreground text-xs flex-shrink-0">
-                                    {formatSimilarity(chunk.similarity)} match
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            {chunk.content && (
-                              <div className="text-muted-foreground leading-relaxed break-words">
-                                {truncateContent(chunk.content)}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </Card>
               );
