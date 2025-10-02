@@ -2,9 +2,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/features/shared/components/ui/button";
 import { Card } from "@/features/shared/components/ui/card";
-import {
-  FileText,
-} from "lucide-react";
+import { FileText } from "lucide-react";
 
 export interface Citation {
   chunkId: number;
@@ -20,8 +18,6 @@ interface CitationsPanelProps {
   backendLabel: string;
   citations?: Citation[];
 }
-
-
 
 export function CitationsPanel({
   show,
@@ -53,16 +49,18 @@ export function CitationsPanel({
           documentId: citation.documentId,
           filename: citation.filename,
           // Calculate average similarity for the document
-          avgSimilarity: citations
-            .filter((c) => c.documentId === citation.documentId)
-            .reduce((sum, c) => sum + (c.similarity || 0), 0) /
-            citations.filter((c) => c.documentId === citation.documentId).length,
+          avgSimilarity:
+            citations
+              .filter((c) => c.documentId === citation.documentId)
+              .reduce((sum, c) => sum + (c.similarity || 0), 0) /
+            citations.filter((c) => c.documentId === citation.documentId)
+              .length,
           referenceCount: citations.filter(
             (c) => c.documentId === citation.documentId,
           ).length,
         },
-      ])
-    ).values()
+      ]),
+    ).values(),
   );
 
   // Fetch document details when citations change
@@ -104,12 +102,12 @@ export function CitationsPanel({
     const units = ["B", "KB", "MB", "GB"];
     let size = bytes;
     let unitIndex = 0;
-    
+
     while (size >= 1024 && unitIndex < units.length - 1) {
       size /= 1024;
       unitIndex++;
     }
-    
+
     return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
   };
 
@@ -160,7 +158,8 @@ export function CitationsPanel({
                           "Unknown Document"}
                       </div>
                       <div className="text-xs text-muted-foreground mt-1 break-words">
-                        Used {doc.referenceCount} time{doc.referenceCount !== 1 ? "s" : ""} in response
+                        Used {doc.referenceCount} time
+                        {doc.referenceCount !== 1 ? "s" : ""} in response
                         {doc.avgSimilarity > 0 && (
                           <span className="block sm:inline">
                             {" • "}
@@ -172,7 +171,7 @@ export function CitationsPanel({
                         <div className="text-xs text-muted-foreground mt-1">
                           {docDetails.mime_type && (
                             <span className="capitalize">
-                              {docDetails.mime_type.split('/')[1]} file
+                              {docDetails.mime_type.split("/")[1]} file
                             </span>
                           )}
                           {docDetails.size_bytes && (
