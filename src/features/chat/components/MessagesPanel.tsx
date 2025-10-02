@@ -3,6 +3,8 @@ import { Card, CardContent } from "@/features/shared/components/ui/card";
 import { Button } from "@/features/shared/components/ui/button";
 import type { Message } from "@/lib/types";
 import { RefObject } from "react";
+import { parseDocumentReferences } from "./CitationsPanel";
+import type { Citation } from "@/lib/types";
 
 export function MessagesPanel(props: {
   messages: Message[];
@@ -47,7 +49,12 @@ export function MessagesPanel(props: {
                   </div>
                 ) : (
                   <div className="text-sm whitespace-pre-wrap">
-                    {msg.content}
+                    {msg.role === "assistant"
+                      ? parseDocumentReferences(
+                          msg.content,
+                          msg.citations || [],
+                        )
+                      : msg.content}
                     {msg._streaming && (
                       <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1">
                         |

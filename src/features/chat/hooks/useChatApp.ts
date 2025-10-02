@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Message, ChatRow } from "@/lib/types";
-import type { Citation } from "@/features/chat/components/CitationsPanel";
+import type { Message, ChatRow, Citation } from "@/lib/types";
 
 // Backend is enabled in the page; mirror flag here to control streaming path if needed
 const USE_REAL_BACKEND = true;
@@ -344,15 +343,20 @@ export function useChatApp(initialChatId?: string) {
               ),
             );
           } else if (event.type === "sources" && event.items) {
-            // Handle citations from the stream
+            // Handle citations from the stream and store them in the message
             newCitations = event.items.map((item) => ({
               chunkId: item.chunkId,
               documentId: item.documentId,
               filename: item.filename,
               similarity: item.similarity,
-              content: undefined, // Content will be fetched by CitationsPanel if needed
             }));
             setCitations(newCitations);
+            // Also store citations in the message for individual access
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId ? { ...m, citations: newCitations } : m,
+              ),
+            );
           }
         }
 

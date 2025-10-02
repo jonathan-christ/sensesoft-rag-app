@@ -23,7 +23,7 @@ export interface BuildPromptResult {
 }
 
 const DEFAULT_SYSTEM_PROMPT =
-  "You are a helpful AI assistant. Use only the information in SOURCES to answer. If the SOURCES do not contain the answer, say you don't know. Cite each fact with [S#].";
+  "You are a helpful AI assistant. Use only the information in SOURCES to answer. If the SOURCES do not contain the answer, say you don't know. Cite each fact using the document references provided in brackets (e.g., [PDF1], [DOCX2]).";
 
 const DEFAULT_HISTORY_PAIRS = 4;
 
@@ -31,16 +31,50 @@ function buildContextBlock(chunks: RetrievedChunk[]): {
   context: string;
   citations: CitationItem[];
 } {
-  const context = chunks
-    .map((chunk, index) => `[S${index + 1}] ${chunk.content}`)
-    .join("\n\n");
+  // Group chunks by document to avoid redundant references
+  const documentGroups = new Map<
+    string,
+    {
+      chunks: RetrievedChunk[];
+      filename?: string;
+      reference: string;
+    }
+  >();
 
-  const citations = chunks.map((chunk) => ({
-    chunkId: chunk.chunk_id,
-    documentId: chunk.document_id,
-    filename: chunk.filename ?? undefined,
-    similarity: chunk.similarity ?? undefined,
-  }));
+  // First pass: group chunks by document ID
+  chunks.forEach((chunk) => {
+    if (!documentGroups.has(chunk.document_id)) {
+      const extension =
+        chunk.filename?.split(".").pop()?.toUpperCase() || "FILE";
+      const referenceNumber = documentGroups.size + 1;
+      documentGroups.set(chunk.document_id, {
+        chunks: [],
+        filename: chunk.filename,
+        reference: `[${extension}${referenceNumber}]`,
+      });
+    }
+    documentGroups.get(chunk.document_id)!.chunks.push(chunk);
+  });
+
+  // Build context using the grouped chunks with single reference per document
+  const contextParts: string[] = [];
+  const citations: CitationItem[] = [];
+
+  documentGroups.forEach((group) => {
+    const reference = group.reference;
+    // Combine all chunks from the same document under one reference
+    group.chunks.forEach((chunk) => {
+      contextParts.push(`${reference} ${chunk.content}`);
+      citations.push({
+        chunkId: chunk.chunk_id,
+        documentId: chunk.document_id,
+        filename: chunk.filename ?? undefined,
+        similarity: chunk.similarity ?? undefined,
+      });
+    });
+  });
+
+  const context = contextParts.join("\n\n");
 
   return { context, citations };
 }
