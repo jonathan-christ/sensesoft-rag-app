@@ -49,10 +49,12 @@ export function MessagesPanel(props: {
                   </div>
                 ) : (
                   <div className="text-sm whitespace-pre-wrap">
-                    {msg.role === "assistant" ? 
-                      parseDocumentReferences(msg.content, msg.citations || []) : 
-                      msg.content
-                    }
+                    {msg.role === "assistant"
+                      ? parseDocumentReferences(
+                          msg.content,
+                          msg.citations || [],
+                        )
+                      : msg.content}
                     {msg._streaming && (
                       <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1">
                         |

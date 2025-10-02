@@ -32,21 +32,25 @@ function buildContextBlock(chunks: RetrievedChunk[]): {
   citations: CitationItem[];
 } {
   // Group chunks by document to avoid redundant references
-  const documentGroups = new Map<string, {
-    chunks: RetrievedChunk[];
-    filename?: string;
-    reference: string;
-  }>();
+  const documentGroups = new Map<
+    string,
+    {
+      chunks: RetrievedChunk[];
+      filename?: string;
+      reference: string;
+    }
+  >();
 
   // First pass: group chunks by document ID
   chunks.forEach((chunk) => {
     if (!documentGroups.has(chunk.document_id)) {
-      const extension = chunk.filename?.split('.').pop()?.toUpperCase() || 'FILE';
+      const extension =
+        chunk.filename?.split(".").pop()?.toUpperCase() || "FILE";
       const referenceNumber = documentGroups.size + 1;
       documentGroups.set(chunk.document_id, {
         chunks: [],
         filename: chunk.filename,
-        reference: `[${extension}${referenceNumber}]`
+        reference: `[${extension}${referenceNumber}]`,
       });
     }
     documentGroups.get(chunk.document_id)!.chunks.push(chunk);
@@ -71,7 +75,7 @@ function buildContextBlock(chunks: RetrievedChunk[]): {
   });
 
   const context = contextParts.join("\n\n");
-  
+
   return { context, citations };
 }
 

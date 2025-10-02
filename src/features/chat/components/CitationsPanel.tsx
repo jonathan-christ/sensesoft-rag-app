@@ -6,17 +6,17 @@ import { FileText } from "lucide-react";
 import type { Citation } from "@/lib/types";
 
 // Utility component for hoverable document references
-export function DocumentReferenceTooltip({ 
-  reference, 
-  documentName, 
-  className = "" 
-}: { 
-  reference: string; 
-  documentName: string; 
+export function DocumentReferenceTooltip({
+  reference,
+  documentName,
+  className = "",
+}: {
+  reference: string;
+  documentName: string;
   className?: string;
 }) {
   return (
-    <span 
+    <span
       className={`inline-block px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-mono cursor-help border border-blue-200 hover:bg-blue-200 transition-colors ${className}`}
       title={documentName}
     >
@@ -27,24 +27,30 @@ export function DocumentReferenceTooltip({
 
 // Utility function to parse text and make document references hoverable
 export function parseDocumentReferences(
-  text: string, 
-  citations: Citation[]
+  text: string,
+  citations: Citation[],
 ): React.ReactNode[] {
   if (!citations || citations.length === 0) {
     return [text];
   }
 
   // Create reference mapping that matches the prompt building logic (group by document)
-  const referenceMap = new Map<string, { documentName: string; documentId: string }>();
-  const documentGroups = new Map<string, { filename?: string; referenceNumber: number }>();
-  
+  const referenceMap = new Map<
+    string,
+    { documentName: string; documentId: string }
+  >();
+  const documentGroups = new Map<
+    string,
+    { filename?: string; referenceNumber: number }
+  >();
+
   // First pass: group citations by document ID and assign reference numbers
   citations.forEach((citation) => {
     if (!documentGroups.has(citation.documentId)) {
       const referenceNumber = documentGroups.size + 1;
       documentGroups.set(citation.documentId, {
         filename: citation.filename,
-        referenceNumber
+        referenceNumber,
       });
     }
   });
@@ -52,26 +58,27 @@ export function parseDocumentReferences(
   // Second pass: create reference mapping
   documentGroups.forEach((group, documentId) => {
     if (group.filename) {
-      const extension = group.filename.split('.').pop()?.toUpperCase() || 'FILE';
-      const filename = group.filename.split('/').pop() || group.filename;
+      const extension =
+        group.filename.split(".").pop()?.toUpperCase() || "FILE";
+      const filename = group.filename.split("/").pop() || group.filename;
       referenceMap.set(`[${extension}${group.referenceNumber}]`, {
         documentName: filename,
-        documentId: documentId
+        documentId: documentId,
       });
     }
-    
+
     // Also handle fallback references with document ID
     const shortId = documentId.substring(0, 8);
     referenceMap.set(`[Doc-${shortId}]`, {
-      documentName: group.filename || 'Unknown Document',
-      documentId: documentId
+      documentName: group.filename || "Unknown Document",
+      documentId: documentId,
     });
   });
 
   // Pattern to match document references like [PDF1], [DOCX2], [Doc-abc12345]
   const referencePattern = /(\[[^\]]+\])/g;
   const parts = text.split(referencePattern);
-  
+
   return parts.map((part, index) => {
     const referenceInfo = referenceMap.get(part);
     if (referenceInfo) {
@@ -195,43 +202,47 @@ export function CitationsPanel({
   // Function to create document reference mapping for hover functionality
   const createReferenceMapping = (): Map<string, HoverableReference> => {
     const mapping = new Map<string, HoverableReference>();
-    
+
     uniqueDocuments.forEach((doc) => {
       const docDetails = documentDetails.get(doc.documentId);
       const filename = docDetails?.filename || doc.filename;
-      
+
       if (filename) {
         // Extract file extension for reference
-        const extension = filename.split('.').pop()?.toUpperCase() || 'FILE';
-        const name = filename.split('/').pop() || filename;
-        
+        const extension = filename.split(".").pop()?.toUpperCase() || "FILE";
+        const name = filename.split("/").pop() || filename;
+
         // Create different possible reference formats that might appear in text
-        const shortName = name.split('.')[0];
-        const truncatedName = shortName.length > 15 ? shortName.substring(0, 15) + '...' : shortName;
-        
+        const shortName = name.split(".")[0];
+        const truncatedName =
+          shortName.length > 15
+            ? shortName.substring(0, 15) + "..."
+            : shortName;
+
         // Map various possible reference formats to document info
         mapping.set(`[${extension}]`, {
           reference: `[${extension}]`,
           documentName: name,
-          documentId: doc.documentId
+          documentId: doc.documentId,
         });
-        
+
         mapping.set(`[${truncatedName}]`, {
           reference: `[${truncatedName}]`,
           documentName: name,
-          documentId: doc.documentId
+          documentId: doc.documentId,
         });
       }
-      
+
       // Fallback mapping for document ID based references
       const shortId = doc.documentId.substring(0, 8);
       mapping.set(`[Doc-${shortId}]`, {
         reference: `[Doc-${shortId}]`,
-        documentName: docDetails?.filename || doc.filename || 'Unknown Document',
-        documentId: doc.documentId
+        documentName:
+          docDetails?.filename || doc.filename || "Unknown Document",
+        documentId: doc.documentId,
       });
     });
-    
+
     return mapping;
   };
 
