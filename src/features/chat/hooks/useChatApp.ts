@@ -1,4 +1,7 @@
+"use client";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import type { Message, ChatRow, Citation } from "@/lib/types";
 
 // Backend is enabled in the page; mirror flag here to control streaming path if needed
@@ -44,9 +47,12 @@ async function* parseSSEStream(response: Response) {
   }
 }
 
-export function useChatApp(initialChatId?: string) {
+export function useChatApp() {
   const [chats, setChats] = useState<ChatRow[]>([]);
-  const [activeChatId, setActiveChatId] = useState<string>(initialChatId || "");
+  const params = useParams<{ id?: string }>();
+  const router = useRouter();
+  const routeChatId = params?.id ?? "";
+  const [activeChatId, setActiveChatId] = useState<string>(routeChatId);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -60,6 +66,10 @@ export function useChatApp(initialChatId?: string) {
   const [creatingNewChat, setCreatingNewChat] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    setActiveChatId(routeChatId);
+  }, [routeChatId]);
+
   // Load chats from backend
   const loadChats = useCallback(async () => {
     try {
@@ -67,8 +77,12 @@ export function useChatApp(initialChatId?: string) {
       if (response.ok) {
         const chatsData = await response.json();
         setChats(chatsData);
-        if (chatsData.length > 0 && !activeChatId) {
-          setActiveChatId(chatsData[0].id);
+        if (routeChatId && !chatsData.some((chat: ChatRow) => chat.id === routeChatId)) {
+          if (chatsData.length > 0) {
+            router.replace(`/chats/${chatsData[0].id}`);
+          } else {
+            router.replace("/chats");
+          }
         }
       }
     } catch (error) {
@@ -76,7 +90,7 @@ export function useChatApp(initialChatId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [activeChatId]);
+  }, [routeChatId, router]);
 
   // Load messages for a chat
   const loadMessages = useCallback(async (chatId: string) => {
@@ -121,44 +135,47 @@ export function useChatApp(initialChatId?: string) {
   }, []);
 
   // Create chat
-  const createChatInBackend = useCallback(async (title?: string) => {
-    setCreatingNewChat(true);
-    try {
-      const response = await fetch("/api/chats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
-      });
-      if (response.ok) {
-        const newChat = await response.json();
-        setChats((prev) => [newChat, ...prev]);
-        setMessages([
-          {
-            id: "welcome",
-            chat_id: newChat.id,
-            role: "assistant",
-            content: "Hello! I'm your AI assistant. How can I help you today?",
-            created_at: new Date().toISOString(),
-          },
-        ]);
-        setActiveChatId(newChat.id);
-        return newChat as ChatRow;
+  const createChatInBackend = useCallback(
+    async (title?: string) => {
+      setCreatingNewChat(true);
+      try {
+        const response = await fetch("/api/chats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title }),
+        });
+        if (response.ok) {
+          const newChat = await response.json();
+          setChats((prev) => [newChat, ...prev]);
+          setMessages([
+            {
+              id: "welcome",
+              chat_id: newChat.id,
+              role: "assistant",
+              content: "Hello! I'm your AI assistant. How can I help you today?",
+              created_at: new Date().toISOString(),
+            },
+          ]);
+          setActiveChatId(newChat.id);
+          router.push(`/chats/${newChat.id}`);
+          return newChat as ChatRow;
+        }
+      } catch (error) {
+        console.error("Error creating chat:", error);
+      } finally {
+        setCreatingNewChat(false);
       }
-    } catch (error) {
-      console.error("Error creating chat:", error);
-    } finally {
-      setCreatingNewChat(false);
-    }
-    return null;
-  }, []);
+      return null;
+    },
+    [router],
+  );
 
   // Initial load
   useEffect(() => {
     (async () => {
       await loadChats();
-      if (initialChatId) setActiveChatId(initialChatId);
     })();
-  }, [initialChatId, loadChats]);
+  }, [loadChats]);
 
   // Load messages when active chat changes
   useEffect(() => {
@@ -232,10 +249,15 @@ export function useChatApp(initialChatId?: string) {
     [renameValue],
   );
 
-  const switchChat = useCallback((chatId: string) => {
-    setActiveChatId(chatId);
-    setGlobalError(null);
-  }, []);
+  const switchChat = useCallback(
+    (chatId: string) => {
+      if (!chatId) return;
+      setActiveChatId(chatId);
+      setGlobalError(null);
+      router.push(`/chats/${chatId}`);
+    },
+    [router],
+  );
 
   const deleteChat = useCallback(
     async (chatId: string) => {
@@ -244,16 +266,22 @@ export function useChatApp(initialChatId?: string) {
           method: "DELETE",
         });
         if (response.ok) {
-          setChats((prev) => prev.filter((c) => c.id !== chatId));
-          if (chatId === activeChatId) {
-            const remaining = chats.filter((c) => c.id !== chatId);
-            if (remaining.length > 0) setActiveChatId(remaining[0].id);
-            else {
-              setActiveChatId("");
-              setMessages([]);
-              setCitations([]);
+          setChats((prev) => {
+            const next = prev.filter((c) => c.id !== chatId);
+            if (chatId === activeChatId) {
+              if (next.length > 0) {
+                const nextId = next[0].id;
+                setActiveChatId(nextId);
+                router.push(`/chats/${nextId}`);
+              } else {
+                setActiveChatId("");
+                setMessages([]);
+                setCitations([]);
+                router.push("/chats");
+              }
             }
-          }
+            return next;
+          });
         } else {
           console.error("Failed to delete chat");
         }
@@ -261,7 +289,7 @@ export function useChatApp(initialChatId?: string) {
         console.error("Error deleting chat:", error);
       }
     },
-    [chats, activeChatId],
+    [activeChatId, router],
   );
 
   const saveUserMessage = useCallback(
