@@ -199,6 +199,8 @@ function ProtectedHomeAppContent({
                   messages={ctx.messages}
                   retryMessage={ctx.retryMessage}
                   bottomRef={ctx.bottomRef}
+                  citations={ctx.citations}
+                  onCitationActivate={() => ctx.setShowCitations(true)}
                 />
               )}
             </div>
