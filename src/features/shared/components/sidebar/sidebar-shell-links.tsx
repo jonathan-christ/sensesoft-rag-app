@@ -18,7 +18,7 @@ interface SidebarButtonProps
 }
 
 export function SidebarLinkAction(
-  props: SidebarLinkProps | SidebarButtonProps
+  props: SidebarLinkProps | SidebarButtonProps,
 ) {
   if (isLinkProps(props)) {
     const { href, label, icon, active } = props;
@@ -55,7 +55,7 @@ export function SidebarLinkAction(
 }
 
 function isLinkProps(
-  props: SidebarLinkProps | SidebarButtonProps
+  props: SidebarLinkProps | SidebarButtonProps,
 ): props is SidebarLinkProps {
   return (props as SidebarLinkProps).href !== undefined;
 }

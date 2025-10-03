@@ -107,7 +107,7 @@ export function ChatAppClient() {
                         }
                         onClick={() =>
                           handleQuestionClick(
-                            "Summarize the key points from the uploaded manual"
+                            "Summarize the key points from the uploaded manual",
                           )
                         }
                       />
@@ -116,7 +116,7 @@ export function ChatAppClient() {
                         description={"What are the installation requirements?"}
                         onClick={() =>
                           handleQuestionClick(
-                            "What are the installation requirements?"
+                            "What are the installation requirements?",
                           )
                         }
                       />
@@ -127,7 +127,7 @@ export function ChatAppClient() {
                         }
                         onClick={() =>
                           handleQuestionClick(
-                            "Compare features between product versions"
+                            "Compare features between product versions",
                           )
                         }
                       />
@@ -138,7 +138,7 @@ export function ChatAppClient() {
                         }
                         onClick={() =>
                           handleQuestionClick(
-                            "Explain the technical specifications in detail"
+                            "Explain the technical specifications in detail",
                           )
                         }
                       />

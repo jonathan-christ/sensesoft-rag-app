@@ -109,7 +109,7 @@ export function useChatApp() {
             role: msg.role,
             content: msg.content,
             created_at: msg.created_at,
-          })
+          }),
         );
         setMessages(formattedMessages);
       } else {
@@ -171,7 +171,7 @@ export function useChatApp() {
       }
       return null;
     },
-    [router]
+    [router],
   );
 
   // Initial load
@@ -201,9 +201,9 @@ export function useChatApp() {
   const filteredChats = useMemo(
     () =>
       chats.filter((chat) =>
-        chat.title.toLowerCase().includes(searchQuery.toLowerCase())
+        chat.title.toLowerCase().includes(searchQuery.toLowerCase()),
       ),
-    [chats, searchQuery]
+    [chats, searchQuery],
   );
 
   const createChat = useCallback(async () => {
@@ -239,8 +239,8 @@ export function useChatApp() {
           const updatedChat = await response.json();
           setChats((prev) =>
             prev.map((c) =>
-              c.id === chatId ? { ...c, title: updatedChat.title } : c
-            )
+              c.id === chatId ? { ...c, title: updatedChat.title } : c,
+            ),
           );
         } else {
           console.error("Failed to rename chat");
@@ -250,7 +250,7 @@ export function useChatApp() {
       }
       setRenamingChatId(null);
     },
-    [renameValue]
+    [renameValue],
   );
 
   const switchChat = useCallback(
@@ -260,7 +260,7 @@ export function useChatApp() {
       setGlobalError(null);
       router.push(`/chats/${chatId}`);
     },
-    [router]
+    [router],
   );
 
   const deleteChat = useCallback(
@@ -293,7 +293,7 @@ export function useChatApp() {
         console.error("Error deleting chat:", error);
       }
     },
-    [activeChatId, router]
+    [activeChatId, router],
   );
 
   const saveUserMessage = useCallback(
@@ -310,7 +310,7 @@ export function useChatApp() {
       }
       return null;
     },
-    []
+    [],
   );
 
   const handleStreamingResponse = useCallback(
@@ -370,7 +370,9 @@ export function useChatApp() {
           if (event.type === "token") {
             acc += event.delta;
             setMessages((prev) =>
-              prev.map((m) => (m.id === messageId ? { ...m, content: acc } : m))
+              prev.map((m) =>
+                m.id === messageId ? { ...m, content: acc } : m,
+              ),
             );
           } else if (event.type === "sources" && event.items) {
             // Handle citations from the stream and store them in the message
@@ -384,22 +386,22 @@ export function useChatApp() {
             // Also store citations in the message for individual access
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === messageId ? { ...m, citations: newCitations } : m
-              )
+                m.id === messageId ? { ...m, citations: newCitations } : m,
+              ),
             );
           }
         }
 
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === messageId ? { ...m, _streaming: false } : m
-          )
+            m.id === messageId ? { ...m, _streaming: false } : m,
+          ),
         );
       } catch (error) {
         throw error;
       }
     },
-    [messages, activeChatId]
+    [messages, activeChatId],
   );
 
   const sendMessage = useCallback(async () => {
@@ -453,11 +455,11 @@ export function useChatApp() {
                 _streaming: false,
                 _error: "Failed to get response. Please try again.",
               }
-            : m
-        )
+            : m,
+        ),
       );
       setGlobalError(
-        "Connection error. Please check your internet connection."
+        "Connection error. Please check your internet connection.",
       );
     } finally {
       setSending(false);
@@ -479,25 +481,25 @@ export function useChatApp() {
         prev.map((m) =>
           m.id === messageId
             ? { ...m, _error: undefined, _streaming: true, content: "" }
-            : m
-        )
+            : m,
+        ),
       );
       handleStreamingResponse(messageId, "retry request").catch(() => {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === messageId
               ? { ...m, _streaming: false, _error: "Retry failed" }
-              : m
-          )
+              : m,
+          ),
         );
       });
     },
-    [messages, handleStreamingResponse]
+    [messages, handleStreamingResponse],
   );
 
   const activeChat = useMemo(
     () => chats.find((c) => c.id === activeChatId),
-    [chats, activeChatId]
+    [chats, activeChatId],
   );
 
   return {

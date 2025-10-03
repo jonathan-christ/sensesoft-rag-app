@@ -26,7 +26,7 @@ interface MarkdownMessageProps {
 function processNodes(
   node: ReactNode,
   citations: Citation[] = [],
-  allowCitations = true
+  allowCitations = true,
 ): ReactNode {
   const applyCitations = (text: string) =>
     allowCitations ? parseDocumentReferences(text, citations) : text;
@@ -46,7 +46,7 @@ function processNodes(
               ? cloneElement(grandChild, {
                   key: `citation-${index}-${grandIndex}`,
                 })
-              : grandChild
+              : grandChild,
           );
         });
       } else {
@@ -64,7 +64,7 @@ function processNodes(
     const processedChildren = processNodes(
       props.children,
       citations,
-      nextAllow
+      nextAllow,
     );
     return cloneElement(node, undefined, processedChildren);
   }
@@ -93,7 +93,7 @@ function MarkdownMessageBase({
           {...rest}
           className={cn(
             "text-sm leading-6 text-inherit [&:not(:first-child)]:mt-2",
-            c
+            c,
           )}
         >
           {processNodes(children, normalizedCitations)}
@@ -141,7 +141,7 @@ function MarkdownMessageBase({
           {...rest}
           className={cn(
             "list-disc pl-5 space-y-2 text-sm leading-6 text-inherit",
-            c
+            c,
           )}
         >
           {processNodes(children, normalizedCitations)}
@@ -161,7 +161,7 @@ function MarkdownMessageBase({
           {...rest}
           className={cn(
             "list-decimal pl-5 space-y-2 text-sm leading-6 text-inherit",
-            c
+            c,
           )}
         >
           {processNodes(children, normalizedCitations)}
@@ -181,7 +181,7 @@ function MarkdownMessageBase({
           {...rest}
           className={cn(
             "marker:text-muted-foreground text-sm leading-6 text-inherit",
-            c
+            c,
           )}
         >
           {processNodes(children, normalizedCitations)}
@@ -201,7 +201,7 @@ function MarkdownMessageBase({
           {...rest}
           className={cn(
             "border-l-2 border-primary/40 pl-3 italic text-sm leading-6 text-inherit",
-            c
+            c,
           )}
         >
           {processNodes(children, normalizedCitations)}
@@ -220,7 +220,7 @@ function MarkdownMessageBase({
           rel={rest.rel ?? "noreferrer"}
           className={cn(
             "text-primary underline underline-offset-4 hover:text-primary/80",
-            c
+            c,
           )}
         >
           {processNodes(children, normalizedCitations)}
@@ -237,7 +237,7 @@ function MarkdownMessageBase({
           {...rest}
           className={cn(
             "rounded bg-muted px-1 py-0.5 text-[0.75rem] font-mono text-inherit",
-            c
+            c,
           )}
         >
           {children}
@@ -254,7 +254,7 @@ function MarkdownMessageBase({
           {...rest}
           className={cn(
             "mt-4 overflow-x-auto rounded-md bg-muted p-3 text-sm",
-            c
+            c,
           )}
         >
           {children}
@@ -284,7 +284,7 @@ function MarkdownMessageBase({
           {...rest}
           className={cn(
             "border-b bg-muted px-3 py-2 text-left font-semibold",
-            c
+            c,
           )}
         >
           {children}
