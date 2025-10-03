@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MessageSquare } from "lucide-react";
 
-import { useChatContext } from "@/features/chat/context/ChatContext";
-import { ChatHeader } from "@/features/chat/components/ChatHeader";
-import { MessagesPanel } from "@/features/chat/components/MessagesPanel";
-import { CitationsPanel } from "@/features/chat/components/CitationsPanel";
-import { GlobalErrorBanner } from "@/features/chat/components/GlobalErrorBanner";
-import { ChatInput } from "@/features/chat/components/ChatInput";
+import { useChatContext } from "../context/ChatContext";
+import { ChatHeader } from "./ChatHeader";
+import { MessagesPanel } from "./MessagesPanel";
+import { CitationsPanel } from "./CitationsPanel";
+import { GlobalErrorBanner } from "./GlobalErrorBanner";
+import { ChatInput } from "./ChatInput";
 import { ResizableSplitter } from "@/features/shared/components/ui/resizable-splitter";
+import LoadingSpinner from "@/features/shared/components/loading-spinner";
 
 export function ChatAppClient() {
   const ctx = useChatContext();
@@ -53,12 +54,7 @@ export function ChatAppClient() {
 
   if (ctx.loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading chats...</p>
-        </div>
-      </div>
+      <LoadingSpinner label="chats"/>
     );
   }
 
@@ -94,17 +90,20 @@ export function ChatAppClient() {
                         Welcome to Akkodis AI
                       </h2>
                       <p className="text-gray-600 text-lg max-w-md mx-auto">
-                        Start a conversation to get instant answers from your documents using advanced AI technology.
+                        Start a conversation to get instant answers from your
+                        documents using advanced AI technology.
                       </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <SuggestionCard
                         title="Document Summary"
-                        description={"Summarize the key points from the uploaded manual"}
+                        description={
+                          "Summarize the key points from the uploaded manual"
+                        }
                         onClick={() =>
                           handleQuestionClick(
-                            "Summarize the key points from the uploaded manual",
+                            "Summarize the key points from the uploaded manual"
                           )
                         }
                       />
@@ -113,25 +112,29 @@ export function ChatAppClient() {
                         description={"What are the installation requirements?"}
                         onClick={() =>
                           handleQuestionClick(
-                            "What are the installation requirements?",
+                            "What are the installation requirements?"
                           )
                         }
                       />
                       <SuggestionCard
                         title="Feature Comparison"
-                        description={"Compare features between product versions"}
+                        description={
+                          "Compare features between product versions"
+                        }
                         onClick={() =>
                           handleQuestionClick(
-                            "Compare features between product versions",
+                            "Compare features between product versions"
                           )
                         }
                       />
                       <SuggestionCard
                         title="Technical Specs"
-                        description={"Explain the technical specifications in detail"}
+                        description={
+                          "Explain the technical specifications in detail"
+                        }
                         onClick={() =>
                           handleQuestionClick(
-                            "Explain the technical specifications in detail",
+                            "Explain the technical specifications in detail"
                           )
                         }
                       />

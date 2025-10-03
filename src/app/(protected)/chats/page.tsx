@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/features/auth/lib/supabase/server";
-import { ChatAppClient } from "./_components/ChatAppClient";
+import { ChatAppClient } from "../../../features/chat/components/ChatAppClient";
 
 export default async function ChatsPage() {
   const supabase = await createClient();
