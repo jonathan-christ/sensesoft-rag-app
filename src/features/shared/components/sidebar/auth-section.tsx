@@ -29,10 +29,10 @@ export function AuthSection(props: {
           <button
             type="button"
             onClick={() => void onLogout()}
-            className="opacity-0 transition-opacity group-hover:opacity-100 text-red-600 hover:text-red-700"
+            className="opacity-0 transition-opacity group-hover:opacity-100 text-red-600 hover:text-red-900"
             title="Logout"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4 w-4 cursor-pointer" />
           </button>
         </div>
       </div>
