@@ -6,8 +6,26 @@ import { useDocsPage } from "@/features/docs/hooks/useDocsPage";
 
 export default function DocsPage() {
   const {
-    state: { documents, loading, uploading, error, files },
-    actions: { addFiles, removeFile, upload, refresh },
+    state: {
+      documents,
+      loading,
+      uploading,
+      error,
+      files,
+      deletingDocumentId,
+      renamingDocumentId,
+      renameValue,
+    },
+    actions: {
+      addFiles,
+      removeFile,
+      upload,
+      refresh,
+      beginRename,
+      setRenameValue,
+      submitRename,
+      deleteDocument,
+    },
   } = useDocsPage();
 
   return (
@@ -26,6 +44,13 @@ export default function DocsPage() {
             documents={documents}
             loading={loading}
             onRefresh={refresh}
+            deletingDocumentId={deletingDocumentId}
+            renamingDocumentId={renamingDocumentId}
+            renameValue={renameValue}
+            setRenameValue={setRenameValue}
+            beginRename={beginRename}
+            submitRename={submitRename}
+            deleteDocument={deleteDocument}
           />
         </div>
       </div>

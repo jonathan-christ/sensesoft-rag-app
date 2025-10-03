@@ -24,3 +24,33 @@ export async function uploadDocuments(files: File[]) {
 
   return response.json().catch(() => ({}));
 }
+
+export async function deleteDocument(documentId: string) {
+  const response = await fetch(`/api/docs/${documentId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.error ?? "Failed to delete document");
+  }
+
+  return response.json().catch(() => ({}));
+}
+
+export async function updateDocument(documentId: string, newFilename: string) {
+  const response = await fetch(`/api/docs/${documentId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ filename: newFilename }),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.error ?? "Failed to update document");
+  }
+
+  return response.json().catch(() => ({}));
+}
