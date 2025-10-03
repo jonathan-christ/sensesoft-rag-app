@@ -10,13 +10,16 @@ interface SidebarLinkProps {
   active?: boolean;
 }
 
-interface SidebarButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type"> {
+interface SidebarButtonProps
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type"> {
   label: string;
   icon: ReactNode;
   onClick: () => void;
 }
 
-export function SidebarLinkAction(props: SidebarLinkProps | SidebarButtonProps) {
+export function SidebarLinkAction(
+  props: SidebarLinkProps | SidebarButtonProps
+) {
   if (isLinkProps(props)) {
     const { href, label, icon, active } = props;
     return (
@@ -27,7 +30,9 @@ export function SidebarLinkAction(props: SidebarLinkProps | SidebarButtonProps) 
       >
         <span className="absolute left-0 top-0 h-full w-0.5 bg-transparent" />
         <span className="flex h-6 w-6 items-center justify-center">{icon}</span>
-        <span className="hidden whitespace-nowrap group-hover:inline">{label}</span>
+        <span className="hidden whitespace-nowrap group-hover:inline">
+          {label}
+        </span>
       </Link>
     );
   }
@@ -42,11 +47,15 @@ export function SidebarLinkAction(props: SidebarLinkProps | SidebarButtonProps) 
     >
       <span className="absolute left-0 top-0 h-full w-0.5 bg-transparent" />
       <span className="flex h-6 w-6 items-center justify-center">{icon}</span>
-      <span className="hidden whitespace-nowrap group-hover:inline">{label}</span>
+      <span className="hidden whitespace-nowrap group-hover:inline">
+        {label}
+      </span>
     </button>
   );
 }
 
-function isLinkProps(props: SidebarLinkProps | SidebarButtonProps): props is SidebarLinkProps {
+function isLinkProps(
+  props: SidebarLinkProps | SidebarButtonProps
+): props is SidebarLinkProps {
   return (props as SidebarLinkProps).href !== undefined;
 }

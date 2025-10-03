@@ -9,7 +9,9 @@ const ChatAppContext = createContext<ChatContextValue | null>(null);
 
 export function ChatAppProvider({ children }: { children: ReactNode }) {
   const value = useChatApp();
-  return <ChatAppContext.Provider value={value}>{children}</ChatAppContext.Provider>;
+  return (
+    <ChatAppContext.Provider value={value}>{children}</ChatAppContext.Provider>
+  );
 }
 
 export function useChatContext() {

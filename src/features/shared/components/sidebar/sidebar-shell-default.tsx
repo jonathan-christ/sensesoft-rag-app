@@ -35,12 +35,18 @@ export function DefaultSidebar({
               href={item.href}
               label={item.label}
               icon={item.icon}
-              active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+              active={
+                pathname === item.href || pathname.startsWith(`${item.href}/`)
+              }
             />
           ))}
         </nav>
         <SidebarDivider />
-        <AuthSection email={authEmail} loading={authLoading} onLogout={onLogout} />
+        <AuthSection
+          email={authEmail}
+          loading={authLoading}
+          onLogout={onLogout}
+        />
       </aside>
       <main className="flex-1 min-w-0">{children}</main>
     </div>
@@ -51,10 +57,22 @@ function LogoBlock() {
   return (
     <div className="flex h-12 items-center justify-center p-3">
       <div className="block group-hover:hidden">
-        <Image src="/akkodis_logo_small.svg" alt="Akkodis" width={24} height={24} priority />
+        <Image
+          src="/akkodis_logo_small.svg"
+          alt="Akkodis"
+          width={24}
+          height={24}
+          priority
+        />
       </div>
       <div className="hidden w-full px-3 group-hover:block">
-        <Image src="/akkodis_logo.svg" alt="Akkodis" width={160} height={28} priority />
+        <Image
+          src="/akkodis_logo.svg"
+          alt="Akkodis"
+          width={160}
+          height={28}
+          priority
+        />
       </div>
     </div>
   );

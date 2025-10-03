@@ -94,17 +94,20 @@ export function ChatAppClient() {
                         Welcome to Akkodis AI
                       </h2>
                       <p className="text-gray-600 text-lg max-w-md mx-auto">
-                        Start a conversation to get instant answers from your documents using advanced AI technology.
+                        Start a conversation to get instant answers from your
+                        documents using advanced AI technology.
                       </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <SuggestionCard
                         title="Document Summary"
-                        description={"Summarize the key points from the uploaded manual"}
+                        description={
+                          "Summarize the key points from the uploaded manual"
+                        }
                         onClick={() =>
                           handleQuestionClick(
-                            "Summarize the key points from the uploaded manual",
+                            "Summarize the key points from the uploaded manual"
                           )
                         }
                       />
@@ -113,25 +116,29 @@ export function ChatAppClient() {
                         description={"What are the installation requirements?"}
                         onClick={() =>
                           handleQuestionClick(
-                            "What are the installation requirements?",
+                            "What are the installation requirements?"
                           )
                         }
                       />
                       <SuggestionCard
                         title="Feature Comparison"
-                        description={"Compare features between product versions"}
+                        description={
+                          "Compare features between product versions"
+                        }
                         onClick={() =>
                           handleQuestionClick(
-                            "Compare features between product versions",
+                            "Compare features between product versions"
                           )
                         }
                       />
                       <SuggestionCard
                         title="Technical Specs"
-                        description={"Explain the technical specifications in detail"}
+                        description={
+                          "Explain the technical specifications in detail"
+                        }
                         onClick={() =>
                           handleQuestionClick(
-                            "Explain the technical specifications in detail",
+                            "Explain the technical specifications in detail"
                           )
                         }
                       />

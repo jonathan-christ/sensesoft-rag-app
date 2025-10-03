@@ -20,7 +20,9 @@ export function LinkItem({
         className={`absolute left-0 top-0 h-full w-0.5 transition-colors ${active ? "bg-primary" : "bg-transparent"}`}
       />
       <span className="flex h-6 w-6 items-center justify-center">{icon}</span>
-      <span className="hidden group-hover:inline whitespace-nowrap">{label}</span>
+      <span className="hidden group-hover:inline whitespace-nowrap">
+        {label}
+      </span>
     </Link>
   );
 }

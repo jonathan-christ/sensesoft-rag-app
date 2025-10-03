@@ -48,7 +48,9 @@ export function AuthSection(props: {
         <span className="flex h-6 w-6 items-center justify-center">
           <LogIn className="h-4 w-4" />
         </span>
-        <span className="hidden whitespace-nowrap group-hover:inline">Login</span>
+        <span className="hidden whitespace-nowrap group-hover:inline">
+          Login
+        </span>
       </Link>
       <Link
         href="/signup"
@@ -57,7 +59,9 @@ export function AuthSection(props: {
         <span className="flex h-6 w-6 items-center justify-center">
           <UserPlus className="h-4 w-4" />
         </span>
-        <span className="hidden whitespace-nowrap group-hover:inline">Sign Up</span>
+        <span className="hidden whitespace-nowrap group-hover:inline">
+          Sign Up
+        </span>
       </Link>
     </div>
   );
