@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/features/shared/components/ui/card";
 import { Button } from "@/features/shared/components/ui/button";
 import type { Message } from "@/lib/types";
 import { MarkdownMessage } from "@/features/chat/components/MarkdownMessage";
+import { TypingIndicator } from "@/features/chat/components/TypingIndicator";
 
 export function MessagesPanel(props: {
   messages: Message[];
@@ -13,7 +14,7 @@ export function MessagesPanel(props: {
   const { messages, retryMessage, bottomRef } = props;
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-36">
+    <div className="flex-1 overflow-y-auto p-4 space-y-4">
       {messages.length === 0 ? (
         <div className="flex items-center justify-center h-full">
           <div className="text-center text-muted-foreground">
@@ -33,7 +34,7 @@ export function MessagesPanel(props: {
               className={`flex ${isUser ? "justify-end" : "justify-start"}`}
             >
               <Card
-                className={`max-w-[80%] ${isUser ? "bg-primary text-primary-foreground" : msg._error ? "bg-destructive/10 border-destructive/30" : "bg-muted"}`}
+                className={`max-w-[80%] py-0 ${isUser ? "bg-primary text-primary-foreground" : msg._error ? "bg-destructive/10 border-destructive/30" : "bg-muted"}`}
               >
                 <CardContent className="p-4">
                   {msg._error ? (
@@ -61,9 +62,10 @@ export function MessagesPanel(props: {
                         />
                       )}
                       {msg._streaming && (
-                        <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1">
-                          |
-                        </span>
+                        <TypingIndicator
+                          className="mt-3"
+                          dotClassName="bg-current/80 h-1.5 w-1.5"
+                        />
                       )}
                     </div>
                   )}
