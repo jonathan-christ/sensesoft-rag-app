@@ -12,7 +12,7 @@ export function ChatInput(props: {
 }) {
   const { input, setInput, activeChatPresent, sending, onSubmit } = props;
   return (
-    <div className="border-t border-border p-4 bg-card sticky bottom-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
+    <div className="border-t border-border p-4 sticky bottom-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
       <form
         onSubmit={(e) => {
           e.preventDefault();

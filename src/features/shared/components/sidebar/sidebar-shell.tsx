@@ -2,9 +2,9 @@
 
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, MouseEvent } from "react";
 import { FileText, Pencil, Plus, Search, Trash2 } from "lucide-react";
-
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { createClient } from "@/features/auth/lib/supabase/client";
 import { AuthSection } from "./auth-section";
 import { LinkItem } from "./link-item";
@@ -35,7 +35,7 @@ export default function SidebarShell({
       }
     })();
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (_event: AuthChangeEvent, session: Session | null) => {
         setAuthEmail(session?.user?.email ?? null);
       },
     );
@@ -338,7 +338,7 @@ function ChatListItem({
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              onClick={(e) => {
+              onClick={(e: MouseEvent<HTMLButtonElement>) => {
                 e.stopPropagation();
                 beginRename(chat);
               }}
@@ -350,7 +350,7 @@ function ChatListItem({
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-destructive"
-              onClick={(e) => {
+              onClick={(e: MouseEvent<HTMLButtonElement>) => {
                 e.stopPropagation();
                 if (confirm("Delete this chat?")) deleteChat(chat.id);
               }}

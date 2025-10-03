@@ -55,7 +55,9 @@ function processNodes(
   }
 
   if (isValidElement(node)) {
-    const { type, props } = node;
+    const { type, props } = node as typeof node & {
+      props: { children?: ReactNode };
+    };
     const nextAllow =
       allowCitations && type !== "code" && type !== "pre";
     const processedChildren = processNodes(props.children, citations, nextAllow);
