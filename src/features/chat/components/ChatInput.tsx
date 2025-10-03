@@ -1,7 +1,8 @@
 "use client";
 import { Button } from "@/features/shared/components/ui/button";
 import { Input } from "@/features/shared/components/ui/input";
-import { Send, Loader2 } from "lucide-react";
+import { Send } from "lucide-react";
+import { TypingIndicator } from "@/features/chat/components/TypingIndicator";
 
 export function ChatInput(props: {
   input: string;
@@ -42,12 +43,10 @@ export function ChatInput(props: {
         <Button
           type="submit"
           disabled={!activeChatPresent || !input.trim() || sending}
-          className="h-12 px-6"
+          className="h-12 aspect-square"
         >
           {sending ? (
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-            </div>
+            <TypingIndicator dotClassName="bg-primary-foreground" />
           ) : (
             <div className="flex items-center gap-2">
               <Send className="h-4 w-4" />

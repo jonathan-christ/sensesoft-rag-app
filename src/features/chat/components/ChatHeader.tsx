@@ -1,5 +1,6 @@
 "use client";
 import { Button } from "@/features/shared/components/ui/button";
+import { TypingIndicator } from "@/features/chat/components/TypingIndicator";
 
 export function ChatHeader(props: {
   title: string;
@@ -24,7 +25,7 @@ export function ChatHeader(props: {
           <h1 className="font-semibold text-lg">{title}</h1>
           {sending && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+              <TypingIndicator dotClassName="bg-green-500" />
               <span className="text-sm">AI is typing...</span>
             </div>
           )}
