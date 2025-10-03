@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { FileText, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { FileText, MessageSquare, Pencil, Search, Trash2 } from "lucide-react";
 
 import { createClient } from "@/features/auth/lib/supabase/client";
 import { AuthSection } from "./auth-section";
@@ -13,11 +13,7 @@ import { Input } from "@/features/shared/components/ui/input";
 import type { ChatRow } from "@/lib/types";
 import { ChatAppProvider, useChatContext } from "@/features/chat/context/ChatContext";
 
-export default function SidebarShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function SidebarShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -34,11 +30,11 @@ export default function SidebarShell({
         if (mounted) setAuthLoading(false);
       }
     })();
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setAuthEmail(session?.user?.email ?? null);
-      },
-    );
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthEmail(session?.user?.email ?? null);
+    });
+
     return () => {
       mounted = false;
       listener?.subscription.unsubscribe();
@@ -53,58 +49,46 @@ export default function SidebarShell({
     },
   ];
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(`${href}/`);
+  const inScope =
+    pathname.startsWith("/chats") || navItems.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
 
-  const inScope = navItems.some((item) => isActive(item.href)) || pathname.startsWith("/chats");
-
-  if (!inScope) return <>{children}</>;
-
-  const sharedProps = {
-    navItems,
-    authEmail,
-    authLoading,
-    onLogout: async () => {
-      await supabase.auth.signOut();
-      router.push("/login");
-    },
-    children,
-    pathname,
-  } as const;
-
-  if (pathname.startsWith("/chats")) {
-    return (
-      <ChatAppProvider>
-        <ChatSidebarLayout {...sharedProps} />
-      </ChatAppProvider>
-    );
+  if (!inScope) {
+    return <>{children}</>;
   }
 
-  return <DefaultSidebarLayout {...sharedProps} />;
+  return (
+    <ChatAppProvider>
+      <SidebarContent
+        navItems={navItems}
+        authEmail={authEmail}
+        authLoading={authLoading}
+        onLogout={async () => {
+          await supabase.auth.signOut();
+          router.push("/login");
+        }}
+        pathname={pathname}
+      >
+        {children}
+      </SidebarContent>
+    </ChatAppProvider>
+  );
 }
 
-interface SidebarLayoutProps {
+interface SidebarContentProps {
   navItems: { href: string; label: string; icon: React.ReactNode }[];
   authEmail: string | null;
   authLoading: boolean;
   onLogout: () => Promise<void>;
-  children: React.ReactNode;
   pathname: string;
-  chat?: ChatSidebarProps;
+  children: React.ReactNode;
 }
 
-function BaseSidebarLayout({
-  navItems,
-  authEmail,
-  authLoading,
-  onLogout,
-  chat,
-  children,
-  pathname,
-}: SidebarLayoutProps & { chat?: ChatSidebarProps }) {
+function SidebarContent({ navItems, authEmail, authLoading, onLogout, pathname, children }: SidebarContentProps) {
+  const ctx = useChatContext();
+
   return (
     <div className="flex h-screen">
-      <aside className="group flex flex-col bg-card border-r border-border w-14 hover:w-56 transition-[width] duration-200 overflow-hidden">
+      <aside className="group flex w-14 flex-col overflow-hidden border-r border-border bg-card transition-[width] duration-200 hover:w-56">
         <LogoBlock />
         <nav className="space-y-1 pt-1">
           {navItems.map((item) => (
@@ -113,77 +97,48 @@ function BaseSidebarLayout({
               href={item.href}
               label={item.label}
               icon={item.icon}
-              active={pathnameMatches(item.href, pathname)}
+              active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
             />
           ))}
+          <SidebarAction
+            icon={<MessageSquare className="h-4 w-4" />}
+            label="New Chat"
+            onClick={() => void ctx.createChat()}
+            disabled={ctx.sending || ctx.creatingNewChat}
+          />
         </nav>
-        {chat && (
-          <>
-            <SidebarDivider />
-            <ChatListSection {...chat} />
-          </>
-        )}
+        <SidebarDivider />
+        <ChatListSection
+          chats={ctx.chats}
+          filteredChats={ctx.filteredChats}
+          activeChatId={ctx.activeChatId}
+          searchQuery={ctx.searchQuery}
+          setSearchQuery={ctx.setSearchQuery}
+          renamingChatId={ctx.renamingChatId}
+          renameValue={ctx.renameValue}
+          setRenameValue={ctx.setRenameValue}
+          beginRename={ctx.beginRename}
+          submitRename={ctx.submitRename}
+          deleteChat={ctx.deleteChat}
+          switchChat={ctx.switchChat}
+          sending={ctx.sending}
+        />
         <SidebarDivider />
         <AuthSection email={authEmail} loading={authLoading} onLogout={onLogout} />
       </aside>
       <main className="flex-1 min-w-0">{children}</main>
     </div>
   );
-
-  function pathnameMatches(href: string, current: string) {
-    if (href === "/docs") {
-      return current.startsWith("/docs");
-    }
-    return current === href;
-  }
-}
-
-function ChatSidebarLayout(props: SidebarLayoutProps) {
-  const ctx = useChatContext();
-  const chatProps: ChatSidebarProps = {
-    chats: ctx.chats,
-    filteredChats: ctx.filteredChats,
-    activeChatId: ctx.activeChatId,
-    searchQuery: ctx.searchQuery,
-    setSearchQuery: ctx.setSearchQuery,
-    renamingChatId: ctx.renamingChatId,
-    renameValue: ctx.renameValue,
-    setRenameValue: ctx.setRenameValue,
-    beginRename: ctx.beginRename,
-    submitRename: ctx.submitRename,
-    deleteChat: ctx.deleteChat,
-    switchChat: ctx.switchChat,
-    createChat: ctx.createChat,
-    sending: ctx.sending,
-  };
-
-  return <BaseSidebarLayout {...props} chat={chatProps} />;
-}
-
-function DefaultSidebarLayout(props: SidebarLayoutProps) {
-  return <BaseSidebarLayout {...props} />;
 }
 
 function LogoBlock() {
   return (
-    <div className="p-3 flex items-center justify-center h-12">
+    <div className="flex h-12 items-center justify-center p-3">
       <div className="block group-hover:hidden">
-        <Image
-          src="/akkodis_logo_small.svg"
-          alt="Akkodis"
-          width={24}
-          height={24}
-          priority
-        />
+        <Image src="/akkodis_logo_small.svg" alt="Akkodis" width={24} height={24} priority />
       </div>
-      <div className="hidden group-hover:block w-full px-3">
-        <Image
-          src="/akkodis_logo.svg"
-          alt="Akkodis"
-          width={160}
-          height={28}
-          priority
-        />
+      <div className="hidden w-full px-3 group-hover:block">
+        <Image src="/akkodis_logo.svg" alt="Akkodis" width={160} height={28} priority />
       </div>
     </div>
   );
@@ -206,13 +161,12 @@ interface ChatSidebarProps {
   submitRename: (chatId: string) => void;
   deleteChat: (chatId: string) => void;
   switchChat: (chatId: string) => void;
-  createChat: () => void;
   sending: boolean;
 }
 
 function ChatListSection({
-  filteredChats,
   chats,
+  filteredChats,
   activeChatId,
   searchQuery,
   setSearchQuery,
@@ -223,35 +177,52 @@ function ChatListSection({
   submitRename,
   deleteChat,
   switchChat,
-  createChat,
   sending,
 }: ChatSidebarProps) {
+  const [showSearch, setShowSearch] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showSearch) {
+      searchInputRef.current?.focus();
+    }
+  }, [showSearch]);
+
+  const toggleSearch = () => {
+    setShowSearch((prev) => {
+      if (prev) {
+        setSearchQuery("");
+      }
+      return !prev;
+    });
+  };
+
   return (
-    <div className="flex-1 flex-col hidden group-hover:flex overflow-hidden">
+    <div className="hidden flex-1 flex-col overflow-hidden group-hover:flex">
       <div className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         <span>Chats</span>
         <Button
-          size="sm"
-          className="h-7 px-2"
-          onClick={createChat}
-          disabled={sending}
-          title="Create new chat"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground"
+          onClick={toggleSearch}
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Search className="h-4 w-4" />
         </Button>
       </div>
-      <div className="px-3 pb-2">
+      <div className={`${showSearch ? "group-hover:block" : "hidden"} px-3 pb-2`}>
         <div className="relative">
           <Input
+            ref={searchInputRef}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search chats"
             className="h-8 pl-8 text-sm"
           />
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto px-2 pb-3 space-y-1">
+      <div className="flex-1 space-y-1 overflow-y-auto px-2 pb-3">
         {filteredChats.map((chat) => (
           <ChatListItem
             key={chat.id}
@@ -268,12 +239,10 @@ function ChatListSection({
           />
         ))}
         {filteredChats.length === 0 && searchQuery && (
-          <div className="text-xs text-muted-foreground px-2 py-4">No chats found</div>
+          <div className="px-2 py-4 text-xs text-muted-foreground">No chats found</div>
         )}
         {chats.length === 0 && !searchQuery && (
-          <div className="text-xs text-muted-foreground px-2 py-4">
-            No chats yet. Create your first chat.
-          </div>
+          <div className="px-2 py-4 text-xs text-muted-foreground">No chats yet. Create your first chat.</div>
         )}
       </div>
     </div>
@@ -337,7 +306,7 @@ function ChatListItem({
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="h-6 w-6"
               onClick={(e) => {
                 e.stopPropagation();
                 beginRename(chat);
@@ -349,7 +318,7 @@ function ChatListItem({
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-destructive"
+              className="h-6 w-6 text-destructive"
               onClick={(e) => {
                 e.stopPropagation();
                 if (confirm("Delete this chat?")) deleteChat(chat.id);
@@ -362,5 +331,30 @@ function ChatListItem({
         </div>
       )}
     </div>
+  );
+}
+
+function SidebarAction({
+  icon,
+  label,
+  onClick,
+  disabled,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="relative flex w-full items-center justify-center gap-3 px-0 py-2 text-left transition-all duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-60 group-hover:justify-start group-hover:px-3"
+    >
+      <span className="absolute left-0 top-0 h-full w-0.5 bg-transparent" />
+      <span className="flex h-6 w-6 items-center justify-center">{icon}</span>
+      <span className="hidden whitespace-nowrap group-hover:inline">{label}</span>
+    </button>
   );
 }
