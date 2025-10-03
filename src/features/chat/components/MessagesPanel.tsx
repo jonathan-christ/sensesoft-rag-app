@@ -34,7 +34,13 @@ export function MessagesPanel(props: {
               className={`flex ${isUser ? "justify-end" : "justify-start"}`}
             >
               <Card
-                className={`max-w-[80%] py-0 ${isUser ? "bg-primary text-primary-foreground" : msg._error ? "bg-destructive/10 border-destructive/30" : "bg-muted"}`}
+                className={`max-w-[80%] py-0 ${
+                  isUser
+                    ? "bg-primary text-primary-foreground"
+                    : msg._error
+                      ? "bg-destructive/10 border-destructive/30 shadow-none"
+                      : "bg-muted shadow-none"
+                }`}
               >
                 <CardContent className="p-4">
                   {msg._error ? (
