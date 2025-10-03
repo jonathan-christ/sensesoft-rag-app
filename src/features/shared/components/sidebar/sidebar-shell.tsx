@@ -34,7 +34,7 @@ export default function SidebarShell({ children }: SidebarShellProps) {
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event: AuthChangeEvent, session: Session | null) => {
         setAuthEmail(session?.user?.email ?? null);
-      },
+      }
     );
 
     return () => {
@@ -61,6 +61,10 @@ export default function SidebarShell({ children }: SidebarShellProps) {
     pathname,
     navItems,
   } as const;
+
+  if (!authLoading && !authEmail) {
+    return <>{children}</>;
+  }
 
   return (
     <ChatAppProvider>
