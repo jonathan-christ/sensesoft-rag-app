@@ -36,7 +36,7 @@ export function MessagesPanel(props: {
               <Card
                 className={`max-w-[80%] py-0 ${
                   isUser
-                    ? "bg-primary text-primary-foreground"
+                    ? "bg-primary text-primary-foreground border-border/20"
                     : msg._error
                       ? "bg-destructive/10 border-destructive/30 shadow-none"
                       : "bg-muted shadow-none"
