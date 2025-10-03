@@ -37,18 +37,31 @@ function processNodes(
 
   if (Array.isArray(node)) {
     const result: ReactNode[] = [];
+    let autoKey = 0;
     node.forEach((child, index) => {
       const processed = processNodes(child, citations, allowCitations);
       if (Array.isArray(processed)) {
         processed.forEach((grandChild, grandIndex) => {
-          result.push(
-            isValidElement(grandChild) && grandChild.key == null
-              ? cloneElement(grandChild, { key: `citation-${index}-${grandIndex}` })
-              : grandChild,
-          );
+          if (isValidElement(grandChild)) {
+            result.push(
+              cloneElement(grandChild, {
+                key: `citation-${index}-${grandIndex}-${autoKey++}`,
+              }),
+            );
+          } else {
+            result.push(grandChild);
+          }
         });
       } else {
-        result.push(processed);
+        if (isValidElement(processed)) {
+          result.push(
+            cloneElement(processed, {
+              key: `citation-${index}-${autoKey++}`,
+            }),
+          );
+        } else {
+          result.push(processed);
+        }
       }
     });
     return result;

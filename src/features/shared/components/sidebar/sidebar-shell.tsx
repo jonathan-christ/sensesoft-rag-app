@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, MouseEvent } from "react";
-import { FileText, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState, useRef, MouseEvent } from "react";
+import { FileText, MessageSquare, MessageSquarePlus, Pencil, Search, Trash2 } from "lucide-react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { createClient } from "@/features/auth/lib/supabase/client";
 import { AuthSection } from "./auth-section";
@@ -72,15 +72,11 @@ export default function SidebarShell({
     pathname,
   } as const;
 
-  if (pathname.startsWith("/chats")) {
-    return (
-      <ChatAppProvider>
-        <ChatSidebarLayout {...sharedProps} />
-      </ChatAppProvider>
-    );
-  }
-
-  return <DefaultSidebarLayout {...sharedProps} />;
+  return (
+    <ChatAppProvider>
+      <ChatSidebarLayout {...sharedProps} />
+    </ChatAppProvider>
+  );
 }
 
 interface SidebarLayoutProps {
@@ -116,6 +112,9 @@ function BaseSidebarLayout({
               active={pathnameMatches(item.href, pathname)}
             />
           ))}
+          {chat && (
+            <CreateChatNavButton onClick={chat.createChat} disabled={chat.sending} />
+          )}
         </nav>
         {chat && (
           <>
@@ -158,10 +157,6 @@ function ChatSidebarLayout(props: SidebarLayoutProps) {
   };
 
   return <BaseSidebarLayout {...props} chat={chatProps} />;
-}
-
-function DefaultSidebarLayout(props: SidebarLayoutProps) {
-  return <BaseSidebarLayout {...props} />;
 }
 
 function LogoBlock() {
@@ -223,60 +218,124 @@ function ChatListSection({
   submitRename,
   deleteChat,
   switchChat,
-  createChat,
   sending,
 }: ChatSidebarProps) {
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isSearchVisible) {
+      searchInputRef.current?.focus();
+    }
+  }, [isSearchVisible]);
+
+  const toggleSearch = () => {
+    if (isSearchVisible) {
+      setIsSearchVisible(false);
+      setSearchQuery("");
+      return;
+    }
+    setIsSearchVisible(true);
+  };
+
   return (
-    <div className="flex-1 flex-col hidden group-hover:flex overflow-hidden">
+    <div className="flex h-full flex-1 flex-col overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        <span>Chats</span>
-        <Button
-          size="sm"
-          className="h-7 px-2"
-          onClick={createChat}
-          disabled={sending}
-          title="Create new chat"
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </Button>
-      </div>
-      <div className="px-3 pb-2">
-        <div className="relative">
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search chats"
-            className="h-8 pl-8 text-sm"
-          />
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <span className="flex w-full items-center justify-center gap-2 group-hover:justify-start">
+          <MessageSquare className="h-4 w-4" aria-hidden="true" />
+          <span className="hidden group-hover:inline">Chats</span>
+        </span>
+        <div className="hidden group-hover:block">
+          <Button
+            size="sm"
+            className="h-7 px-2"
+            onClick={toggleSearch}
+            variant={isSearchVisible ? "secondary" : "ghost"}
+            title="Toggle chat search"
+            aria-label="Toggle chat search"
+            aria-pressed={isSearchVisible}
+          >
+            <Search className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto px-2 pb-3 space-y-1">
-        {filteredChats.map((chat) => (
-          <ChatListItem
-            key={chat.id}
-            chat={chat}
-            active={chat.id === activeChatId}
-            renamingChatId={renamingChatId}
-            renameValue={renameValue}
-            setRenameValue={setRenameValue}
-            beginRename={beginRename}
-            submitRename={submitRename}
-            deleteChat={deleteChat}
-            switchChat={switchChat}
-            sending={sending}
-          />
-        ))}
-        {filteredChats.length === 0 && searchQuery && (
-          <div className="text-xs text-muted-foreground px-2 py-4">No chats found</div>
-        )}
-        {chats.length === 0 && !searchQuery && (
-          <div className="text-xs text-muted-foreground px-2 py-4">
-            No chats yet. Create your first chat.
+      <div className="flex-1 overflow-hidden">
+        <div className="flex h-full flex-col overflow-hidden opacity-0 transition-opacity duration-200 ease-out pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto">
+          {isSearchVisible && (
+            <div className="px-3 pb-2">
+              <div className="relative">
+                <Input
+                  ref={searchInputRef}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search chats"
+                  className="h-8 pl-8 text-sm"
+                />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              </div>
+            </div>
+          )}
+          <div className="flex-1 overflow-y-auto px-2 pb-3 space-y-1">
+            {filteredChats.map((chat) => (
+              <ChatListItem
+                key={chat.id}
+                chat={chat}
+                active={chat.id === activeChatId}
+                renamingChatId={renamingChatId}
+                renameValue={renameValue}
+                setRenameValue={setRenameValue}
+                beginRename={beginRename}
+                submitRename={submitRename}
+                deleteChat={deleteChat}
+                switchChat={switchChat}
+                sending={sending}
+              />
+            ))}
+            {filteredChats.length === 0 && searchQuery && (
+              <div className="px-2 py-4 text-xs text-muted-foreground">No chats found</div>
+            )}
+            {chats.length === 0 && !searchQuery && (
+              <div className="px-2 py-4 text-xs text-muted-foreground">
+                No chats yet. Create your first chat.
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
+  );
+}
+
+function CreateChatNavButton({
+  onClick,
+  disabled,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+}) {
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    if (!disabled) onClick();
+  };
+
+  return (
+    <a
+      href="#"
+      onClick={handleClick}
+      role="button"
+      aria-label="Create new chat"
+      aria-disabled={disabled || undefined}
+      tabIndex={disabled ? -1 : 0}
+      className={`relative flex w-full items-center justify-center gap-3 py-2 px-0 transition-all duration-200 text-black hover:bg-muted group-hover:px-3 group-hover:justify-start ${
+        disabled ? "pointer-events-none opacity-50" : "cursor-pointer"
+      }`}
+    >
+      <span className="absolute left-0 top-0 h-full w-0.5 bg-transparent" />
+      <span className="flex h-6 w-6 items-center justify-center">
+        <MessageSquarePlus className="h-4 w-4" aria-hidden="true" />
+      </span>
+      <span className="hidden group-hover:inline truncate">New Chat</span>
+    </a>
   );
 }
 
@@ -307,7 +366,7 @@ function ChatListItem({
 
   return (
     <div
-      className={`group relative rounded-md border px-3 py-2 text-sm transition-colors ${active ? "border-primary/40 bg-primary/10" : "border-transparent hover:bg-muted"}`}
+      className={`group relative cursor-pointer rounded-md border px-3 py-2 text-sm transition-colors ${active ? "border-primary/40 bg-primary/10" : "border-transparent hover:bg-muted"}`}
       onClick={() => !sending && switchChat(chat.id)}
     >
       {isRenaming ? (
@@ -333,7 +392,7 @@ function ChatListItem({
               {new Date(chat.created_at).toLocaleDateString()}
             </div>
           </div>
-          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto">
             <Button
               variant="ghost"
               size="icon"
