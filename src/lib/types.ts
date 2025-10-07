@@ -26,6 +26,7 @@ export interface Message {
   role: "user" | "assistant" | "system";
   content: string;
   created_at: string;
+  audioUrl?: string;
   citations?: Citation[]; // citations specific to this message
   _streaming?: boolean; // true = content still being generated, false = final content received
   _error?: string; // error message if generation failed
