@@ -1,18 +1,31 @@
-// This is a placeholder for a real transcription service.
-// In a production environment, you would replace this with a call
-// to a service like AssemblyAI, Deepgram, or another provider.
+import { AssemblyAI } from 'assemblyai';
+
+const client = new AssemblyAI({
+  apiKey: process.env.ASSEMBLYAI_API_KEY,
+});
 
 export async function transcribeAudio(audioUrl: string): Promise<string> {
   console.log(`Transcription requested for: ${audioUrl}`);
 
-  // Simulate a network request to a transcription service
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  try {
+    const transcript = await client.transcripts.create({
+      audio_url: audioUrl,
+    });
 
-  // In a real implementation, you would handle the audio processing
-  // and return the actual transcript. For now, we'll return a
-  // hardcoded string.
-  const transcript = "This is a transcribed voice message.";
+    if (transcript.status === 'error') {
+      console.error('Transcription failed:', transcript.error);
+      throw new Error('Transcription failed');
+    }
 
-  console.log(`Transcription result: ${transcript}`);
-  return transcript;
+    if (!transcript.text) {
+      console.warn('Transcription returned no text.');
+      return '';
+    }
+
+    console.log(`Transcription result: ${transcript.text}`);
+    return transcript.text;
+  } catch (error) {
+    console.error('Error calling AssemblyAI:', error);
+    throw new Error('Failed to transcribe audio');
+  }
 }
