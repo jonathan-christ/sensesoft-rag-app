@@ -1,7 +1,12 @@
 import { AssemblyAI } from 'assemblyai';
 
+const apiKey = process.env.ASSEMBLYAI_API_KEY;
+if (!apiKey) {
+  throw new Error('ASSEMBLYAI_API_KEY is not set in the environment variables.');
+}
+
 const client = new AssemblyAI({
-  apiKey: process.env.ASSEMBLYAI_API_KEY,
+  apiKey,
 });
 
 export async function transcribeAudio(audioUrl: string): Promise<string> {
