@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       console.error("Error uploading file to Supabase Storage:", error);
       return NextResponse.json(
         { error: "Failed to upload file" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -41,18 +41,21 @@ export async function POST(req: NextRequest) {
       .getPublicUrl(data.path);
 
     if (!publicUrlData) {
-        return NextResponse.json(
-            { error: "Failed to get public URL" },
-            { status: 500 }
-        );
+      return NextResponse.json(
+        { error: "Failed to get public URL" },
+        { status: 500 },
+      );
     }
 
-    return NextResponse.json({ audioUrl: publicUrlData.publicUrl }, { status: 200 });
+    return NextResponse.json(
+      { audioUrl: publicUrlData.publicUrl },
+      { status: 200 },
+    );
   } catch (error) {
     console.error("Error in POST /api/audio/upload:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
