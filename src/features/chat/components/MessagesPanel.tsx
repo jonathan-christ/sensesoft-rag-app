@@ -47,18 +47,36 @@ export function MessagesPanel(props: {
                     </Button>
                   </div>
                 ) : (
-                  <div className="text-sm whitespace-pre-wrap">
-                    {msg.role === "assistant"
-                      ? parseDocumentReferences(
-                          msg.content,
-                          msg.citations || [],
-                        )
-                      : msg.content}
-                    {msg._streaming && (
-                      <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1">
-                        |
-                      </span>
+                  <div className="space-y-2">
+                    {/* Show audio player for messages with audio_url */}
+                    {msg.audio_url && msg.role === "user" && (
+                      <div className="mb-2">
+                        <audio 
+                          controls 
+                          className="w-full max-w-xs h-8"
+                          style={{ minHeight: '32px' }}
+                        >
+                          <source src={msg.audio_url} type="audio/webm" />
+                          <source src={msg.audio_url} type="audio/mpeg" />
+                          Your browser does not support the audio element.
+                        </audio>
+                      </div>
                     )}
+                    
+                    {/* Show message content */}
+                    <div className="text-sm whitespace-pre-wrap">
+                      {msg.role === "assistant"
+                        ? parseDocumentReferences(
+                            msg.content,
+                            msg.citations || [],
+                          )
+                        : msg.content}
+                      {msg._streaming && (
+                        <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1">
+                          |
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
                 {msg._limitNotice && (

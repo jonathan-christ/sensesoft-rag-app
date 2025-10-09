@@ -2,6 +2,7 @@
 import { Button } from "@/features/shared/components/ui/button";
 import { Input } from "@/features/shared/components/ui/input";
 import { Send, Loader2 } from "lucide-react";
+import { AudioInput } from "./AudioInput";
 
 export function ChatInput(props: {
   input: string;
@@ -9,8 +10,9 @@ export function ChatInput(props: {
   activeChatPresent: boolean;
   sending: boolean;
   onSubmit: () => void;
+  onAudioSubmit?: (audioUrl: string) => Promise<void>;
 }) {
-  const { input, setInput, activeChatPresent, sending, onSubmit } = props;
+  const { input, setInput, activeChatPresent, sending, onSubmit, onAudioSubmit } = props;
   return (
     <div className="border-t border-border p-4 bg-card sticky bottom-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
       <form
@@ -18,7 +20,7 @@ export function ChatInput(props: {
           e.preventDefault();
           onSubmit();
         }}
-        className="flex gap-3"
+        className="flex gap-2"
       >
         <div className="flex-1">
           <Input
@@ -39,6 +41,16 @@ export function ChatInput(props: {
             className="h-12 text-base"
           />
         </div>
+        
+        {/* Audio input button inline */}
+        {onAudioSubmit && (
+          <AudioInput
+            onAudioSubmit={onAudioSubmit}
+            disabled={!activeChatPresent}
+            sending={sending}
+          />
+        )}
+        
         <Button
           type="submit"
           disabled={!activeChatPresent || !input.trim() || sending}
@@ -55,6 +67,7 @@ export function ChatInput(props: {
           )}
         </Button>
       </form>
+      
       <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
         <span>Press Enter to send, Shift+Enter for new line</span>
         {input.length > 0 && <span>{input.length} characters</span>}

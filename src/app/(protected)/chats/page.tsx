@@ -226,6 +226,7 @@ function ProtectedHomeAppContent({
           activeChatPresent={!!ctx.activeChat}
           sending={ctx.sending}
           onSubmit={ctx.sendMessage}
+          onAudioSubmit={ctx.sendAudioMessage}
         />
       </div>
     </div>
