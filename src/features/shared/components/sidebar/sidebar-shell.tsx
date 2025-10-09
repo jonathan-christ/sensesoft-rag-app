@@ -513,8 +513,9 @@ function ChatListSection({
           <DialogHeader>
             <DialogTitle>Delete chat</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &ldquo;{deleteDialogChat?.title ?? ""}&rdquo;?
-              This action cannot be undone.
+              Are you sure you want to delete &ldquo;
+              {deleteDialogChat?.title ?? ""}&rdquo;? This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -604,14 +605,18 @@ function ChatListItem({
     <div
       className={cn(
         "group relative cursor-pointer rounded-md border px-3 py-2 text-sm transition-colors",
-        active ? "border-primary/40 bg-primary/10" : "border-transparent hover:bg-muted",
+        active
+          ? "border-primary/40 bg-primary/10"
+          : "border-transparent hover:bg-muted",
         disabled && "opacity-70 pointer-events-none",
       )}
       onClick={() => !sending && !pending && switchChat(chat.id)}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <div className="truncate font-medium text-foreground">{chat.title}</div>
+          <div className="truncate font-medium text-foreground">
+            {chat.title}
+          </div>
           <div className="text-xs text-muted-foreground">
             {new Date(chat.created_at).toLocaleDateString()}
           </div>
