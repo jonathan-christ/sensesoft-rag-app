@@ -470,72 +470,74 @@ export function useChatApp(initialChatId?: string) {
     [chats, activeChatId],
   );
 
-  const sendAudioMessage = useCallback(async (audioUrl: string) => {
-    if (sending) return;
-    
-    let currentChatId = activeChatId;
-    if (!currentChatId) {
-      setCreatingNewChat(true);
-      const newChat = await createChatInBackend("New Chat");
-      if (!newChat) {
+  const sendAudioMessage = useCallback(
+    async (audioUrl: string) => {
+      if (sending) return;
+
+      let currentChatId = activeChatId;
+      if (!currentChatId) {
+        setCreatingNewChat(true);
+        const newChat = await createChatInBackend("New Chat");
+        if (!newChat) {
+          setCreatingNewChat(false);
+          return;
+        }
+        currentChatId = newChat.id;
+        setActiveChatId(newChat.id);
+        setChats((prev) => [newChat, ...prev]);
         setCreatingNewChat(false);
-        return;
-      }
-      currentChatId = newChat.id;
-      setActiveChatId(newChat.id);
-      setChats((prev) => [newChat, ...prev]);
-      setCreatingNewChat(false);
-    }
-    
-    setGlobalError(null);
-    setSending(true);
-    setCitations([]);
-
-    try {
-      // Save the audio message (backend will transcribe it)
-      const saved = await saveUserMessage(currentChatId, undefined, audioUrl);
-      
-      if (!saved) {
-        throw new Error("Failed to save audio message");
       }
 
-      const userMsg: Message = {
-        id: saved.id,
-        chat_id: currentChatId,
-        role: "user",
-        content: saved.content || "🎤 Audio message", // fallback if transcription fails
-        audio_url: audioUrl,
-        created_at: saved.created_at,
-      };
-      
-      const assistantMsg: Message = {
-        id: `assistant-${Date.now()}`,
-        chat_id: currentChatId,
-        role: "assistant",
-        content: "",
-        created_at: new Date().toISOString(),
-        _streaming: true,
-      };
-      
-      setMessages((prev) => [...prev, userMsg, assistantMsg]);
-      
-      // Use the transcribed content for the AI response
-      const transcribedContent = saved.content || "";
-      await handleStreamingResponse(assistantMsg.id, transcribedContent);
-      
-    } catch (error) {
-      console.error("Error sending audio message:", error);
-      setGlobalError("Failed to send audio message. Please try again.");
-    } finally {
-      setSending(false);
-    }
-  }, [
-    sending,
-    activeChatId,
-    saveUserMessage,
-    handleStreamingResponse,
-    createChatInBackend,
-  ]);
+      setGlobalError(null);
+      setSending(true);
+      setCitations([]);
+
+      try {
+        // Save the audio message (backend will transcribe it)
+        const saved = await saveUserMessage(currentChatId, undefined, audioUrl);
+
+        if (!saved) {
+          throw new Error("Failed to save audio message");
+        }
+
+        const userMsg: Message = {
+          id: saved.id,
+          chat_id: currentChatId,
+          role: "user",
+          content: saved.content || "🎤 Audio message", // fallback if transcription fails
+          audio_url: audioUrl,
+          created_at: saved.created_at,
+        };
+
+        const assistantMsg: Message = {
+          id: `assistant-${Date.now()}`,
+          chat_id: currentChatId,
+          role: "assistant",
+          content: "",
+          created_at: new Date().toISOString(),
+          _streaming: true,
+        };
+
+        setMessages((prev) => [...prev, userMsg, assistantMsg]);
+
+        // Use the transcribed content for the AI response
+        const transcribedContent = saved.content || "";
+        await handleStreamingResponse(assistantMsg.id, transcribedContent);
+      } catch (error) {
+        console.error("Error sending audio message:", error);
+        setGlobalError("Failed to send audio message. Please try again.");
+      } finally {
+        setSending(false);
+      }
+    },
+    [
+      sending,
+      activeChatId,
+      saveUserMessage,
+      handleStreamingResponse,
+      createChatInBackend,
+    ],
+  );
 
   return {
     // state

@@ -51,10 +51,10 @@ export function MessagesPanel(props: {
                     {/* Show audio player for messages with audio_url */}
                     {msg.audio_url && msg.role === "user" && (
                       <div className="mb-2">
-                        <audio 
-                          controls 
+                        <audio
+                          controls
                           className="w-full max-w-xs h-8"
-                          style={{ minHeight: '32px' }}
+                          style={{ minHeight: "32px" }}
                         >
                           <source src={msg.audio_url} type="audio/webm" />
                           <source src={msg.audio_url} type="audio/mpeg" />
@@ -62,7 +62,7 @@ export function MessagesPanel(props: {
                         </audio>
                       </div>
                     )}
-                    
+
                     {/* Show message content */}
                     <div className="text-sm whitespace-pre-wrap">
                       {msg.role === "assistant"

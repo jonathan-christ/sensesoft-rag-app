@@ -13,20 +13,24 @@ interface AudioInputProps {
 function formatDuration(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
-export function AudioInput({ onAudioSubmit, disabled, sending }: AudioInputProps) {
+export function AudioInput({
+  onAudioSubmit,
+  disabled,
+  sending,
+}: AudioInputProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  const { 
-    isRecording, 
-    isSupported, 
-    startRecording, 
-    stopRecording, 
-    duration, 
-    error: recordingError 
+
+  const {
+    isRecording,
+    isSupported,
+    startRecording,
+    stopRecording,
+    duration,
+    error: recordingError,
   } = useAudioRecorder();
 
   const uploadAudio = async (audioBlob: Blob): Promise<string> => {
@@ -62,7 +66,7 @@ export function AudioInput({ onAudioSubmit, disabled, sending }: AudioInputProps
       try {
         setError(null);
         setUploading(true);
-        
+
         const audioBlob = await stopRecording();
         if (!audioBlob) {
           throw new Error("No audio recorded");
@@ -70,10 +74,11 @@ export function AudioInput({ onAudioSubmit, disabled, sending }: AudioInputProps
 
         const audioUrl = await uploadAudio(audioBlob);
         await onAudioSubmit(audioUrl);
-        
       } catch (err) {
         console.error("Error processing audio:", err);
-        setError(err instanceof Error ? err.message : "Failed to process audio");
+        setError(
+          err instanceof Error ? err.message : "Failed to process audio",
+        );
       } finally {
         setUploading(false);
       }
@@ -109,7 +114,7 @@ export function AudioInput({ onAudioSubmit, disabled, sending }: AudioInputProps
         >
           <Mic className="h-4 w-4" />
         </Button>
-        
+
         {/* Error tooltip */}
         {showError && (
           <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-50">
@@ -129,7 +134,7 @@ export function AudioInput({ onAudioSubmit, disabled, sending }: AudioInputProps
         <div className="h-2 w-2 bg-red-500 rounded-full animate-pulse" />
         <span className="font-mono text-xs">{formatDuration(duration)}</span>
       </div>
-      
+
       {/* Cancel button */}
       <Button
         type="button"
@@ -142,7 +147,7 @@ export function AudioInput({ onAudioSubmit, disabled, sending }: AudioInputProps
       >
         <X className="h-4 w-4" />
       </Button>
-      
+
       {/* Toggleable mic button - click to stop and send */}
       <Button
         type="button"
