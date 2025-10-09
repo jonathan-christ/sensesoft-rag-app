@@ -1,6 +1,6 @@
-import { createClient } from "../../../../../features/auth/lib/supabase/server";
+import { createClient } from "@/features/auth/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { transcribeAudio } from "../../../../../server/transcription";
+import { transcribeAudio } from "@/server/transcription";
 
 export async function POST(
   req: NextRequest,
