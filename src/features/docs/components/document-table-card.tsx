@@ -23,7 +23,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import { Input } from "@/features/shared/components/ui/input";
 
 const STATUS_ICONS: Record<string, ReactNode> = {
@@ -50,7 +50,7 @@ export function DocumentTableCard({
   documents,
   loading,
   onRefresh,
-  deletingDocumentId,
+  //deletingDocumentId,
   renamingDocumentId,
   renameValue,
   setRenameValue,

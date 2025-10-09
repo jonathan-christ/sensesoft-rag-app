@@ -4,7 +4,6 @@ import { Button } from "@/features/shared/components/ui/button";
 import type { Message } from "@/lib/types";
 import { RefObject } from "react";
 import { parseDocumentReferences } from "./CitationsPanel";
-import type { Citation } from "@/lib/types";
 
 export function MessagesPanel(props: {
   messages: Message[];

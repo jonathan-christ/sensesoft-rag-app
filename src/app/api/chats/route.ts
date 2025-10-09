@@ -1,4 +1,4 @@
-import { createClient } from "../../../features/auth/lib/supabase/server";
+import { createClient } from "@/features/auth/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET() {
