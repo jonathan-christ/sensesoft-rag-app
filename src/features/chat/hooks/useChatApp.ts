@@ -63,6 +63,7 @@ export function useChatApp() {
   const [showCitations, setShowCitations] = useState(false);
   const [citations, setCitations] = useState<Citation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
   const [creatingNewChat, setCreatingNewChat] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -98,6 +99,7 @@ export function useChatApp() {
   // Load messages for a chat
   const loadMessages = useCallback(async (chatId: string) => {
     if (!chatId) return;
+    setMessagesLoading(true);
     try {
       const response = await fetch(`/api/chats/${chatId}/messages`);
       if (response.ok) {
@@ -134,6 +136,8 @@ export function useChatApp() {
           created_at: new Date().toISOString(),
         },
       ]);
+    } finally {
+      setMessagesLoading(false);
     }
   }, []);
 
@@ -253,6 +257,11 @@ export function useChatApp() {
     [renameValue],
   );
 
+  const cancelRename = useCallback(() => {
+    setRenamingChatId(null);
+    setRenameValue("");
+  }, []);
+
   const switchChat = useCallback(
     (chatId: string) => {
       if (!chatId) return;
@@ -270,22 +279,32 @@ export function useChatApp() {
           method: "DELETE",
         });
         if (response.ok) {
+          let nextActiveId: string | null = null;
+          let cleared = false;
+
           setChats((prev) => {
             const next = prev.filter((c) => c.id !== chatId);
             if (chatId === activeChatId) {
               if (next.length > 0) {
-                const nextId = next[0].id;
-                setActiveChatId(nextId);
-                router.push(`/chats/${nextId}`);
+                nextActiveId = next[0].id;
               } else {
-                setActiveChatId("");
-                setMessages([]);
-                setCitations([]);
-                router.push("/chats");
+                cleared = true;
               }
             }
             return next;
           });
+
+          if (chatId === activeChatId) {
+            if (nextActiveId) {
+              setActiveChatId(nextActiveId);
+              router.push(`/chats/${nextActiveId}`);
+            } else if (cleared) {
+              setActiveChatId("");
+              setMessages([]);
+              setCitations([]);
+              router.push("/chats");
+            }
+          }
         } else {
           console.error("Failed to delete chat");
         }
@@ -585,6 +604,7 @@ export function useChatApp() {
     showCitations,
     citations,
     loading,
+    messagesLoading,
     creatingNewChat,
     bottomRef,
     filteredChats,
@@ -598,6 +618,7 @@ export function useChatApp() {
     // actions
     beginRename,
     submitRename,
+    cancelRename,
     switchChat,
     deleteChat,
     createChat,

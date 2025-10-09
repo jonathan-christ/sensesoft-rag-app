@@ -144,6 +144,7 @@ export function ChatAppClient() {
                   messages={ctx.messages}
                   retryMessage={ctx.retryMessage}
                   bottomRef={ctx.bottomRef}
+                  loading={ctx.messagesLoading}
                 />
               )}
             </div>

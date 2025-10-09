@@ -5,13 +5,23 @@ import { Button } from "@/features/shared/components/ui/button";
 import type { Message } from "@/lib/types";
 import { MarkdownMessage } from "@/features/chat/components/MarkdownMessage";
 import { TypingIndicator } from "@/features/chat/components/TypingIndicator";
+import LoadingSpinner from "@/features/shared/components/loading-spinner";
 
 export function MessagesPanel(props: {
   messages: Message[];
   retryMessage: (id: string) => void;
   bottomRef: RefObject<HTMLDivElement | null>;
+  loading: boolean;
 }) {
-  const { messages, retryMessage, bottomRef } = props;
+  const { messages, retryMessage, bottomRef, loading } = props;
+
+  if (loading) {
+    return (
+      <div className="flex-1 overflow-y-auto p-4">
+        <LoadingSpinner label="messages" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
