@@ -173,6 +173,7 @@ export function ChatAppClient() {
           activeChatPresent={!!ctx.activeChat}
           sending={ctx.sending}
           onSubmit={ctx.sendMessage}
+          onAudioSubmit={ctx.sendAudioMessage}
         />
       </div>
     </div>
