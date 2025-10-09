@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Button } from "@/features/shared/components/ui/button";
-import { Mic, MicOff, Send, Loader2, X } from "lucide-react";
+import { Mic, Loader2, X } from "lucide-react";
 import { useAudioRecorder } from "../hooks/useAudioRecorder";
 
 interface AudioInputProps {
@@ -48,33 +48,35 @@ export function AudioInput({ onAudioSubmit, disabled, sending }: AudioInputProps
     return audioUrl;
   };
 
-  const handleStartRecording = async () => {
-    setError(null);
-    try {
-      await startRecording();
-    } catch (err) {
-      setError("Failed to start recording");
-    }
-  };
-
-  const handleStopAndSend = async () => {
-    try {
+  const handleToggleRecording = async () => {
+    if (!isRecording) {
+      // Start recording
       setError(null);
-      setUploading(true);
-      
-      const audioBlob = await stopRecording();
-      if (!audioBlob) {
-        throw new Error("No audio recorded");
+      try {
+        await startRecording();
+      } catch (err) {
+        setError("Failed to start recording");
       }
+    } else {
+      // Stop recording and send
+      try {
+        setError(null);
+        setUploading(true);
+        
+        const audioBlob = await stopRecording();
+        if (!audioBlob) {
+          throw new Error("No audio recorded");
+        }
 
-      const audioUrl = await uploadAudio(audioBlob);
-      await onAudioSubmit(audioUrl);
-      
-    } catch (err) {
-      console.error("Error processing audio:", err);
-      setError(err instanceof Error ? err.message : "Failed to process audio");
-    } finally {
-      setUploading(false);
+        const audioUrl = await uploadAudio(audioBlob);
+        await onAudioSubmit(audioUrl);
+        
+      } catch (err) {
+        console.error("Error processing audio:", err);
+        setError(err instanceof Error ? err.message : "Failed to process audio");
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
@@ -98,7 +100,7 @@ export function AudioInput({ onAudioSubmit, disabled, sending }: AudioInputProps
       <div className="relative">
         <Button
           type="button"
-          onClick={handleStartRecording}
+          onClick={handleToggleRecording}
           disabled={disabled || isProcessing}
           variant="outline"
           size="sm"
@@ -141,18 +143,18 @@ export function AudioInput({ onAudioSubmit, disabled, sending }: AudioInputProps
         <X className="h-4 w-4" />
       </Button>
       
-      {/* Send button */}
+      {/* Toggleable mic button - click to stop and send */}
       <Button
         type="button"
-        onClick={handleStopAndSend}
+        onClick={handleToggleRecording}
         disabled={isProcessing}
-        className="h-12 px-3"
-        title="Send voice message"
+        className="h-12 px-3 bg-green-600 hover:bg-green-700"
+        title="Click to stop recording and send"
       >
         {isProcessing ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          <Send className="h-4 w-4" />
+          <Mic className="h-4 w-4" />
         )}
       </Button>
     </div>
