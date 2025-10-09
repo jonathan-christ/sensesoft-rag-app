@@ -1,5 +1,6 @@
-import { createClient } from "../../../../../features/auth/lib/supabase/server";
+import { createClient } from "@/features/auth/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { transcribeAudio } from "@/server/transcription";
 
 export async function POST(
   req: NextRequest,
@@ -16,7 +17,16 @@ export async function POST(
     }
 
     const { id: chatId } = await params;
-    const { content } = (await req.json()) as { content?: string };
+    const { content: initialContent, audioUrl } = (await req.json()) as {
+      content?: string;
+      audioUrl?: string;
+    };
+
+    let content = initialContent;
+
+    if (audioUrl) {
+      content = await transcribeAudio(audioUrl);
+    }
 
     if (!content) {
       return NextResponse.json(
@@ -28,7 +38,7 @@ export async function POST(
     // Insert the new message
     const { data: newMessage, error: messageError } = await supabase
       .from("messages")
-      .insert({ chat_id: chatId, content, role: "user" })
+      .insert({ chat_id: chatId, content, role: "user", audio_url: audioUrl })
       .select("*")
       .single();
 

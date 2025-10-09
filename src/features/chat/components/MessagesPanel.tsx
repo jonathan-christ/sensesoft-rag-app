@@ -58,22 +58,40 @@ export function MessagesPanel(props: {
                       </Button>
                     </div>
                   ) : (
+                    <div className="space-y-2">
+                    {/* Show audio player for messages with audio_url */}
+                    {msg.audio_url && msg.role === "user" && (
+                      <div className="mb-2">
+                        <audio
+                          controls
+                          className="w-full max-w-xs h-8"
+                          style={{ minHeight: "32px" }}
+                        >
+                          <source src={msg.audio_url} type="audio/webm" />
+                          <source src={msg.audio_url} type="audio/mpeg" />
+                          Your browser does not support the audio element.
+                        </audio>
+                      </div>
+                    )}
+
+                    {/* Show message content */}
                     <div className="text-sm whitespace-pre-wrap">
-                      {isUser ? (
+                        {isUser ? (
                         msg.content
-                      ) : (
+                        ) : (
                         <MarkdownMessage
-                          content={msg.content}
-                          citations={msg.citations}
-                        />
-                      )}
-                      {msg._streaming && (
-                        <TypingIndicator
+                            content={msg.content}
+                            citations={msg.citations}
+                          />
+                        )}
+                        {msg._streaming && (
+                          <TypingIndicator
                           className="mt-3"
-                          dotClassName="bg-current/80 h-1.5 w-1.5"
-                        />
-                      )}
-                    </div>
+                            dotClassName="bg-current/80 h-1.5 w-1.5"
+                          />
+                        )}
+                      </div>
+                  </div>
                   )}
                   {msg._limitNotice && (
                     <div className="mt-2 text-xs text-amber-600">
