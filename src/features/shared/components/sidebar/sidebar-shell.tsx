@@ -2,7 +2,15 @@
 
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useRef, MouseEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  MouseEvent,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import {
   FileText,
   Loader2,
@@ -266,7 +274,7 @@ interface ChatSidebarProps {
   setMenuOpen: (value: boolean) => void;
   setDialogOpen: (value: boolean) => void;
   pendingChatId: string | null;
-  setPendingChatId: (value: string | null) => void;
+  setPendingChatId: Dispatch<SetStateAction<string | null>>;
 }
 
 function ChatListSection({
