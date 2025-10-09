@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Button } from "@/features/shared/components/ui/button";
 import { Card } from "@/features/shared/components/ui/card";
 import { FileText } from "lucide-react";
 import type { Citation } from "@/lib/types";
@@ -246,7 +245,7 @@ export function CitationsPanel({
     return mapping;
   };
 
-  const referenceMapping = createReferenceMapping();
+  //const referenceMapping = createReferenceMapping();
 
   if (!show) {
     return null;
