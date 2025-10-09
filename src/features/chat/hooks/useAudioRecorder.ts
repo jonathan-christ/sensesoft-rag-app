@@ -20,9 +20,9 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const isSupported = typeof window !== "undefined" && 
-    navigator.mediaDevices && 
-    navigator.mediaDevices.getUserMedia && 
-    window.MediaRecorder;
+    !!navigator.mediaDevices && 
+    !!navigator.mediaDevices.getUserMedia && 
+    !!window.MediaRecorder;
 
   const startRecording = useCallback(async () => {
     if (!isSupported) {
