@@ -77,7 +77,10 @@ export function useChatApp() {
       if (response.ok) {
         const chatsData = await response.json();
         setChats(chatsData);
-        if (routeChatId && !chatsData.some((chat: ChatRow) => chat.id === routeChatId)) {
+        if (
+          routeChatId &&
+          !chatsData.some((chat: ChatRow) => chat.id === routeChatId)
+        ) {
           if (chatsData.length > 0) {
             router.replace(`/chats/${chatsData[0].id}`);
           } else {
@@ -152,7 +155,8 @@ export function useChatApp() {
               id: "welcome",
               chat_id: newChat.id,
               role: "assistant",
-              content: "Hello! I'm your AI assistant. How can I help you today?",
+              content:
+                "Hello! I'm your AI assistant. How can I help you today?",
               created_at: new Date().toISOString(),
             },
           ]);

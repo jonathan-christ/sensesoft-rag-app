@@ -3,7 +3,14 @@
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useRef, MouseEvent } from "react";
-import { FileText, MessageSquare, MessageSquarePlus, Pencil, Search, Trash2 } from "lucide-react";
+import {
+  FileText,
+  MessageSquare,
+  MessageSquarePlus,
+  Pencil,
+  Search,
+  Trash2,
+} from "lucide-react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { createClient } from "@/features/auth/lib/supabase/client";
 import { AuthSection } from "./auth-section";
@@ -11,7 +18,10 @@ import { LinkItem } from "./link-item";
 import { Button } from "@/features/shared/components/ui/button";
 import { Input } from "@/features/shared/components/ui/input";
 import type { ChatRow } from "@/lib/types";
-import { ChatAppProvider, useChatContext } from "@/features/chat/context/ChatContext";
+import {
+  ChatAppProvider,
+  useChatContext,
+} from "@/features/chat/context/ChatContext";
 
 export default function SidebarShell({
   children,
@@ -56,7 +66,9 @@ export default function SidebarShell({
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
-  const inScope = navItems.some((item) => isActive(item.href)) || pathname.startsWith("/chats");
+  const inScope =
+    navItems.some((item) => isActive(item.href)) ||
+    pathname.startsWith("/chats");
 
   if (!inScope) return <>{children}</>;
 
@@ -113,7 +125,10 @@ function BaseSidebarLayout({
             />
           ))}
           {chat && (
-            <CreateChatNavButton onClick={chat.createChat} disabled={chat.sending} />
+            <CreateChatNavButton
+              onClick={chat.createChat}
+              disabled={chat.sending}
+            />
           )}
         </nav>
         {chat && (
@@ -123,7 +138,11 @@ function BaseSidebarLayout({
           </>
         )}
         <SidebarDivider />
-        <AuthSection email={authEmail} loading={authLoading} onLogout={onLogout} />
+        <AuthSection
+          email={authEmail}
+          loading={authLoading}
+          onLogout={onLogout}
+        />
       </aside>
       <main className="flex-1 min-w-0">{children}</main>
     </div>
@@ -292,7 +311,9 @@ function ChatListSection({
               />
             ))}
             {filteredChats.length === 0 && searchQuery && (
-              <div className="px-2 py-4 text-xs text-muted-foreground">No chats found</div>
+              <div className="px-2 py-4 text-xs text-muted-foreground">
+                No chats found
+              </div>
             )}
             {chats.length === 0 && !searchQuery && (
               <div className="px-2 py-4 text-xs text-muted-foreground">
@@ -387,7 +408,9 @@ function ChatListItem({
       ) : (
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="truncate font-medium text-foreground">{chat.title}</div>
+            <div className="truncate font-medium text-foreground">
+              {chat.title}
+            </div>
             <div className="text-xs text-muted-foreground">
               {new Date(chat.created_at).toLocaleDateString()}
             </div>

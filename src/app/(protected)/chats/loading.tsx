@@ -1,7 +1,5 @@
 import LoadingSpinner from "@/features/shared/components/loading-spinner";
 
 export default function Loading() {
-  return (
-    <LoadingSpinner label="chats"/>
-  );
+  return <LoadingSpinner label="chats" />;
 }

@@ -71,21 +71,35 @@ function processNodes(
     const { type, props } = node as typeof node & {
       props: { children?: ReactNode };
     };
-    const nextAllow =
-      allowCitations && type !== "code" && type !== "pre";
-    const processedChildren = processNodes(props.children, citations, nextAllow);
+    const nextAllow = allowCitations && type !== "code" && type !== "pre";
+    const processedChildren = processNodes(
+      props.children,
+      citations,
+      nextAllow,
+    );
     return cloneElement(node, undefined, processedChildren);
   }
 
   return node;
 }
 
-function MarkdownMessageBase({ content, citations, className }: MarkdownMessageProps) {
+function MarkdownMessageBase({
+  content,
+  citations,
+  className,
+}: MarkdownMessageProps) {
   const normalizedCitations = citations ?? [];
 
   const overrides = {
     p: {
-      component: ({ children, className: c, ...rest }: { children: ReactNode; className?: string }) => (
+      component: ({
+        children,
+        className: c,
+        ...rest
+      }: {
+        children: ReactNode;
+        className?: string;
+      }) => (
         <p
           {...rest}
           className={cn(
@@ -98,21 +112,42 @@ function MarkdownMessageBase({ content, citations, className }: MarkdownMessageP
       ),
     },
     strong: {
-      component: ({ children, className: c, ...rest }: { children: ReactNode; className?: string }) => (
+      component: ({
+        children,
+        className: c,
+        ...rest
+      }: {
+        children: ReactNode;
+        className?: string;
+      }) => (
         <strong {...rest} className={cn("font-semibold text-inherit", c)}>
           {processNodes(children, normalizedCitations)}
         </strong>
       ),
     },
     em: {
-      component: ({ children, className: c, ...rest }: { children: ReactNode; className?: string }) => (
+      component: ({
+        children,
+        className: c,
+        ...rest
+      }: {
+        children: ReactNode;
+        className?: string;
+      }) => (
         <em {...rest} className={cn("italic text-inherit", c)}>
           {processNodes(children, normalizedCitations)}
         </em>
       ),
     },
     ul: {
-      component: ({ children, className: c, ...rest }: { children: ReactNode; className?: string }) => (
+      component: ({
+        children,
+        className: c,
+        ...rest
+      }: {
+        children: ReactNode;
+        className?: string;
+      }) => (
         <ul
           {...rest}
           className={cn(
@@ -125,7 +160,14 @@ function MarkdownMessageBase({ content, citations, className }: MarkdownMessageP
       ),
     },
     ol: {
-      component: ({ children, className: c, ...rest }: { children: ReactNode; className?: string }) => (
+      component: ({
+        children,
+        className: c,
+        ...rest
+      }: {
+        children: ReactNode;
+        className?: string;
+      }) => (
         <ol
           {...rest}
           className={cn(
@@ -138,7 +180,14 @@ function MarkdownMessageBase({ content, citations, className }: MarkdownMessageP
       ),
     },
     li: {
-      component: ({ children, className: c, ...rest }: { children: ReactNode; className?: string }) => (
+      component: ({
+        children,
+        className: c,
+        ...rest
+      }: {
+        children: ReactNode;
+        className?: string;
+      }) => (
         <li
           {...rest}
           className={cn(
@@ -151,7 +200,14 @@ function MarkdownMessageBase({ content, citations, className }: MarkdownMessageP
       ),
     },
     blockquote: {
-      component: ({ children, className: c, ...rest }: { children: ReactNode; className?: string }) => (
+      component: ({
+        children,
+        className: c,
+        ...rest
+      }: {
+        children: ReactNode;
+        className?: string;
+      }) => (
         <blockquote
           {...rest}
           className={cn(
@@ -164,7 +220,11 @@ function MarkdownMessageBase({ content, citations, className }: MarkdownMessageP
       ),
     },
     a: {
-      component: ({ children, className: c, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement>) => (
+      component: ({
+        children,
+        className: c,
+        ...rest
+      }: AnchorHTMLAttributes<HTMLAnchorElement>) => (
         <a
           {...rest}
           target={rest.target ?? "_blank"}
@@ -179,7 +239,11 @@ function MarkdownMessageBase({ content, citations, className }: MarkdownMessageP
       ),
     },
     code: {
-      component: ({ children, className: c, ...rest }: HTMLAttributes<HTMLElement>) => (
+      component: ({
+        children,
+        className: c,
+        ...rest
+      }: HTMLAttributes<HTMLElement>) => (
         <code
           {...rest}
           className={cn(
@@ -192,43 +256,59 @@ function MarkdownMessageBase({ content, citations, className }: MarkdownMessageP
       ),
     },
     pre: {
-      component: ({ children, className: c, ...rest }: HTMLAttributes<HTMLPreElement>) => (
+      component: ({
+        children,
+        className: c,
+        ...rest
+      }: HTMLAttributes<HTMLPreElement>) => (
         <pre
           {...rest}
-          className={cn("mt-4 overflow-x-auto rounded-md bg-muted p-3 text-sm", c)}
+          className={cn(
+            "mt-4 overflow-x-auto rounded-md bg-muted p-3 text-sm",
+            c,
+          )}
         >
           {children}
         </pre>
       ),
     },
     table: {
-      component: ({ children, className: c, ...rest }: TableHTMLAttributes<HTMLTableElement>) => (
+      component: ({
+        children,
+        className: c,
+        ...rest
+      }: TableHTMLAttributes<HTMLTableElement>) => (
         <div className="my-4 overflow-x-auto rounded-md border">
-          <table
-            {...rest}
-            className={cn("w-full border-collapse text-sm", c)}
-          >
+          <table {...rest} className={cn("w-full border-collapse text-sm", c)}>
             {children}
           </table>
         </div>
       ),
     },
     th: {
-      component: ({ children, className: c, ...rest }: ThHTMLAttributes<HTMLTableCellElement>) => (
+      component: ({
+        children,
+        className: c,
+        ...rest
+      }: ThHTMLAttributes<HTMLTableCellElement>) => (
         <th
           {...rest}
-          className={cn("border-b bg-muted px-3 py-2 text-left font-semibold", c)}
+          className={cn(
+            "border-b bg-muted px-3 py-2 text-left font-semibold",
+            c,
+          )}
         >
           {children}
         </th>
       ),
     },
     td: {
-      component: ({ children, className: c, ...rest }: TdHTMLAttributes<HTMLTableCellElement>) => (
-        <td
-          {...rest}
-          className={cn("border-b px-3 py-2 align-top", c)}
-        >
+      component: ({
+        children,
+        className: c,
+        ...rest
+      }: TdHTMLAttributes<HTMLTableCellElement>) => (
+        <td {...rest} className={cn("border-b px-3 py-2 align-top", c)}>
           {children}
         </td>
       ),
