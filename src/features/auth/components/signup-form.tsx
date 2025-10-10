@@ -63,11 +63,18 @@ export function SignUpForm({
           <CardTitle className="text-2xl">Create your account</CardTitle>
           <CardDescription>
             Start exploring intelligent document search. Already a member?{" "}
-            <Link href="/login" className="underline underline-offset-4">Sign in</Link>.
+            <Link href="/login" className="underline underline-offset-4">
+              Sign in
+            </Link>
+            .
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignUp} noValidate aria-describedby={error ? "signup-error" : undefined}>
+          <form
+            onSubmit={handleSignUp}
+            noValidate
+            aria-describedby={error ? "signup-error" : undefined}
+          >
             <div className="flex flex-col gap-5">
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
@@ -78,7 +85,9 @@ export function SignUpForm({
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  aria-invalid={!!error && error.toLowerCase().includes("email")}
+                  aria-invalid={
+                    !!error && error.toLowerCase().includes("email")
+                  }
                 />
               </div>
               <div className="grid gap-2">
@@ -91,7 +100,9 @@ export function SignUpForm({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  aria-invalid={!!error && error.toLowerCase().includes("password")}
+                  aria-invalid={
+                    !!error && error.toLowerCase().includes("password")
+                  }
                 />
               </div>
               <div className="grid gap-2">
@@ -104,7 +115,9 @@ export function SignUpForm({
                   required
                   value={repeatPassword}
                   onChange={(e) => setRepeatPassword(e.target.value)}
-                  aria-invalid={!!error && error.toLowerCase().includes("password")}
+                  aria-invalid={
+                    !!error && error.toLowerCase().includes("password")
+                  }
                 />
               </div>
               {error && (
@@ -122,7 +135,8 @@ export function SignUpForm({
               </Button>
             </div>
             <div className="mt-5 text-center text-xs text-muted-foreground">
-              We only use your email for authentication and notifications you opt into.
+              We only use your email for authentication and notifications you
+              opt into.
             </div>
           </form>
         </CardContent>

@@ -53,11 +53,19 @@ export function LoginForm({
         <CardHeader>
           <CardTitle className="text-2xl">Sign in</CardTitle>
           <CardDescription>
-            Access your workspace. New here? <Link href="/signup" className="underline underline-offset-4">Create an account</Link>.
+            Access your workspace. New here?{" "}
+            <Link href="/signup" className="underline underline-offset-4">
+              Create an account
+            </Link>
+            .
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} noValidate aria-describedby={error ? "login-error" : undefined}>
+          <form
+            onSubmit={handleLogin}
+            noValidate
+            aria-describedby={error ? "login-error" : undefined}
+          >
             <div className="flex flex-col gap-5">
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
@@ -68,7 +76,9 @@ export function LoginForm({
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  aria-invalid={!!error && error.toLowerCase().includes("email")}
+                  aria-invalid={
+                    !!error && error.toLowerCase().includes("email")
+                  }
                 />
               </div>
               <div className="grid gap-2">
@@ -87,7 +97,9 @@ export function LoginForm({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  aria-invalid={!!error && error.toLowerCase().includes("password")}
+                  aria-invalid={
+                    !!error && error.toLowerCase().includes("password")
+                  }
                 />
               </div>
               {error && (
@@ -100,7 +112,12 @@ export function LoginForm({
                   {error}
                 </p>
               )}
-              <Button type="submit" className="w-full" disabled={isLoading} data-variant="primary">
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading}
+                data-variant="primary"
+              >
                 {isLoading ? "Signing you in…" : "Sign in"}
               </Button>
             </div>
