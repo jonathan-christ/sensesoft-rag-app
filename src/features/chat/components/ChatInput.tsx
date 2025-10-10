@@ -21,7 +21,7 @@ export function ChatInput(props: {
     onAudioSubmit,
   } = props;
   return (
-    <div className="border-t border-border p-4 bg-card sticky bottom-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
+    <div className="border-t border-border p-4 sticky bottom-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -61,7 +61,7 @@ export function ChatInput(props: {
         <Button
           type="submit"
           disabled={!activeChatPresent || !input.trim() || sending}
-          className="h-12 px-6"
+          className="h-12 aspect-square"
         >
           {sending ? (
             <div className="flex items-center gap-2">

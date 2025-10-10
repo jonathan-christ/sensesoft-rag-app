@@ -93,12 +93,6 @@ export function parseDocumentReferences(
   });
 }
 
-interface HoverableReference {
-  reference: string;
-  documentName: string;
-  documentId: string;
-}
-
 interface CitationsPanelProps {
   show: boolean;
   messagesLength: number;
@@ -177,7 +171,7 @@ export function CitationsPanel({
     if (uniqueDocuments.length > 0) {
       fetchDocumentDetails();
     }
-  }, [citations, uniqueDocuments]);
+  }, [citations, uniqueDocuments, documentDetails]);
 
   const formatSimilarity = (similarity?: number) => {
     if (!similarity) return "";
@@ -199,53 +193,51 @@ export function CitationsPanel({
   };
 
   // Function to create document reference mapping for hover functionality
-  const createReferenceMapping = (): Map<string, HoverableReference> => {
-    const mapping = new Map<string, HoverableReference>();
+  // const createReferenceMapping = (): Map<string, HoverableReference> => {
+  //   const mapping = new Map<string, HoverableReference>();
 
-    uniqueDocuments.forEach((doc) => {
-      const docDetails = documentDetails.get(doc.documentId);
-      const filename = docDetails?.filename || doc.filename;
+  //   uniqueDocuments.forEach((doc) => {
+  //     const docDetails = documentDetails.get(doc.documentId);
+  //     const filename = docDetails?.filename || doc.filename;
 
-      if (filename) {
-        // Extract file extension for reference
-        const extension = filename.split(".").pop()?.toUpperCase() || "FILE";
-        const name = filename.split("/").pop() || filename;
+  //     if (filename) {
+  //       // Extract file extension for reference
+  //       const extension = filename.split(".").pop()?.toUpperCase() || "FILE";
+  //       const name = filename.split("/").pop() || filename;
 
-        // Create different possible reference formats that might appear in text
-        const shortName = name.split(".")[0];
-        const truncatedName =
-          shortName.length > 15
-            ? shortName.substring(0, 15) + "..."
-            : shortName;
+  //       // Create different possible reference formats that might appear in text
+  //       const shortName = name.split(".")[0];
+  //       const truncatedName =
+  //         shortName.length > 15
+  //           ? shortName.substring(0, 15) + "..."
+  //           : shortName;
 
-        // Map various possible reference formats to document info
-        mapping.set(`[${extension}]`, {
-          reference: `[${extension}]`,
-          documentName: name,
-          documentId: doc.documentId,
-        });
+  //       // Map various possible reference formats to document info
+  //       mapping.set(`[${extension}]`, {
+  //         reference: `[${extension}]`,
+  //         documentName: name,
+  //         documentId: doc.documentId,
+  //       });
 
-        mapping.set(`[${truncatedName}]`, {
-          reference: `[${truncatedName}]`,
-          documentName: name,
-          documentId: doc.documentId,
-        });
-      }
+  //       mapping.set(`[${truncatedName}]`, {
+  //         reference: `[${truncatedName}]`,
+  //         documentName: name,
+  //         documentId: doc.documentId,
+  //       });
+  //     }
 
-      // Fallback mapping for document ID based references
-      const shortId = doc.documentId.substring(0, 8);
-      mapping.set(`[Doc-${shortId}]`, {
-        reference: `[Doc-${shortId}]`,
-        documentName:
-          docDetails?.filename || doc.filename || "Unknown Document",
-        documentId: doc.documentId,
-      });
-    });
+  //     // Fallback mapping for document ID based references
+  //     const shortId = doc.documentId.substring(0, 8);
+  //     mapping.set(`[Doc-${shortId}]`, {
+  //       reference: `[Doc-${shortId}]`,
+  //       documentName:
+  //         docDetails?.filename || doc.filename || "Unknown Document",
+  //       documentId: doc.documentId,
+  //     });
+  //   });
 
-    return mapping;
-  };
-
-  //const referenceMapping = createReferenceMapping();
+  //   return mapping;
+  // };
 
   if (!show) {
     return null;

@@ -58,7 +58,7 @@ export function AudioInput({
       setError(null);
       try {
         await startRecording();
-      } catch (err) {
+      } catch {
         setError("Failed to start recording");
       }
     } else {
