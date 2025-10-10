@@ -51,14 +51,22 @@ export function LoginForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
+          <CardTitle className="text-2xl">Sign in</CardTitle>
           <CardDescription>
-            Enter your email below to login to your account
+            Access your workspace. New here?{" "}
+            <Link href="/signup" className="underline underline-offset-4">
+              Create an account
+            </Link>
+            .
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin}>
-            <div className="flex flex-col gap-6">
+          <form
+            onSubmit={handleLogin}
+            noValidate
+            aria-describedby={error ? "login-error" : undefined}
+          >
+            <div className="flex flex-col gap-5">
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -68,6 +76,9 @@ export function LoginForm({
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  aria-invalid={
+                    !!error && error.toLowerCase().includes("email")
+                  }
                 />
               </div>
               <div className="grid gap-2">
@@ -86,18 +97,32 @@ export function LoginForm({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  aria-invalid={
+                    !!error && error.toLowerCase().includes("password")
+                  }
                 />
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
+              {error && (
+                <p
+                  id="login-error"
+                  role="alert"
+                  aria-live="polite"
+                  className="text-sm font-medium text-destructive"
+                >
+                  {error}
+                </p>
+              )}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading}
+                data-variant="primary"
+              >
+                {isLoading ? "Signing you in…" : "Sign in"}
               </Button>
             </div>
-            <div className="mt-4 text-center text-sm">
-              Don&apos;t have an account?{" "}
-              <Link href="/signup" className="underline underline-offset-4">
-                Sign up
-              </Link>
+            <div className="mt-5 text-center text-xs text-muted-foreground">
+              Protected by enterprise encryption & session security.
             </div>
           </form>
         </CardContent>
