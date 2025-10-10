@@ -19,9 +19,12 @@ import {
   Clock,
   FileText,
   Loader2,
+  Pencil,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { ReactNode } from "react";
+import { Input } from "@/features/shared/components/ui/input";
 
 const STATUS_ICONS: Record<string, ReactNode> = {
   pending: <Clock className="size-3.5" />,
@@ -34,12 +37,26 @@ type DocumentTableCardProps = {
   documents: DocumentRow[];
   loading: boolean;
   onRefresh: () => Promise<void> | void;
+  deletingDocumentId: string | null;
+  renamingDocumentId: string | null;
+  renameValue: string;
+  setRenameValue: (v: string) => void;
+  beginRename: (document: DocumentRow) => void;
+  submitRename: (documentId: string) => void;
+  deleteDocument: (documentId: string) => void;
 };
 
 export function DocumentTableCard({
   documents,
   loading,
   onRefresh,
+  //deletingDocumentId,
+  renamingDocumentId,
+  renameValue,
+  setRenameValue,
+  beginRename,
+  submitRename,
+  deleteDocument,
 }: DocumentTableCardProps) {
   const sortedDocuments = sortDocuments(documents);
 
@@ -97,14 +114,33 @@ export function DocumentTableCard({
                     className="border-t border-border/60 hover:bg-muted/40"
                   >
                     <td className="px-4 py-3">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">
-                          {doc.filename}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {doc.meta?.job_id ? `Job: ${doc.meta.job_id}` : ""}
-                        </span>
-                      </div>
+                      {renamingDocumentId === doc.id ? (
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            submitRename(doc.id);
+                          }}
+                          className="flex gap-2"
+                        >
+                          <Input
+                            autoFocus
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onBlur={() => submitRename(doc.id)}
+                            className="h-7 text-sm"
+                            disabled={loading}
+                          />
+                        </form>
+                      ) : (
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground">
+                            {doc.filename}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {doc.meta?.job_id ? `Job: ${doc.meta.job_id}` : ""}
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {doc.mime_type ?? "--"}
@@ -129,6 +165,41 @@ export function DocumentTableCard({
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {new Date(doc.created_at).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            beginRename(doc);
+                          }}
+                          title="Rename document"
+                          disabled={loading}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              confirm(
+                                `Are you sure you want to delete the document "${doc.filename}"?`,
+                              )
+                            )
+                              deleteDocument(doc.id);
+                          }}
+                          title="Delete document"
+                          disabled={loading}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))

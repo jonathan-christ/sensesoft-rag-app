@@ -1,5 +1,5 @@
-import { streamChat } from "../../../features/chat/actions/stream-chat";
-import { StreamChatRequest } from "../../../server/llm/types";
+import { streamChat } from "@/features/chat/actions/stream-chat";
+import { StreamChatRequest } from "@/server/llm/types";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {

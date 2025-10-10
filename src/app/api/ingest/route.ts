@@ -115,7 +115,7 @@ export async function POST(request: Request) {
           body: payload,
           headers: { Prefer: "resolution=async" },
         })
-        .catch((invokeError) => {
+        .catch((invokeError: Error) => {
           console.error(
             `Failed to invoke ingest edge function for document ${documentId}:`,
             invokeError,
