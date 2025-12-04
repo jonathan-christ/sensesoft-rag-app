@@ -145,6 +145,8 @@ export function ChatAppClient() {
                   retryMessage={ctx.retryMessage}
                   bottomRef={ctx.bottomRef}
                   loading={ctx.messagesLoading}
+                  selectedMessageId={ctx.selectedMessageId}
+                  onMessageSelect={ctx.selectMessage}
                 />
               )}
             </div>

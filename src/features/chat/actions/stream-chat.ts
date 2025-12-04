@@ -4,7 +4,7 @@ import { createClient } from "@/features/auth/lib/supabase/server";
 import { streamChat as streamChatFromAdapter } from "@/server/llm/providers/gemini";
 import type { StreamChatRequest, StreamChatResponse } from "@/server/llm/types";
 import { searchRelevantChunks } from "@/server/rag/retrieval";
-import { buildPrompt } from "@/server/rag/prompt";
+import { buildPrompt, CitationItem } from "@/server/rag/prompt";
 
 // Stream chat completion (SSE-friendly)
 export async function streamChat(
@@ -52,11 +52,17 @@ export async function streamChat(
         if (chatId) {
           try {
             const supabase = await createClient();
-            const { error } = await supabase
-              .from("messages")
-              .insert([
-                { chat_id: chatId, role: "assistant", content: messageContent },
-              ]);
+            const { error } = await supabase.from("messages").insert([
+              {
+                chat_id: chatId,
+                role: "assistant",
+                content: messageContent,
+                citations:
+                  citations.length > 0
+                    ? (citations as unknown as Record<string, unknown>[])
+                    : null,
+              },
+            ]);
             if (error) {
               console.error("Error saving messages:", error);
             }

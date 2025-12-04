@@ -1,21 +1,19 @@
-import { createClient } from "@/features/auth/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, isAuthError } from "@/server/auth";
+import { unauthorized, internalError, badRequest } from "@/server/responses";
 import { transcribeAudio } from "@/server/transcription";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requireAuth();
+  if (isAuthError(auth)) {
+    return unauthorized();
+  }
+  const { supabase } = auth;
+
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: chatId } = await params;
     const { content: initialContent, audioUrl } = (await req.json()) as {
       content?: string;
@@ -29,10 +27,7 @@ export async function POST(
     }
 
     if (!content) {
-      return NextResponse.json(
-        { error: "Message content is required" },
-        { status: 400 },
-      );
+      return badRequest("Message content is required");
     }
 
     // Insert the new message
@@ -43,10 +38,9 @@ export async function POST(
       .single();
 
     if (messageError) {
-      console.error("Error inserting message:", messageError);
-      return NextResponse.json(
-        { error: "Internal Server Error" },
-        { status: 500 },
+      return internalError(
+        "POST /api/chats/[id]/messages (insert)",
+        messageError,
       );
     }
 
@@ -57,17 +51,13 @@ export async function POST(
       .eq("id", chatId);
 
     if (chatUpdateError) {
-      console.error("Error updating chat timestamp:", chatUpdateError);
       // This error is not critical enough to fail the message insertion, but should be logged.
+      console.error("Error updating chat timestamp:", chatUpdateError);
     }
 
     return NextResponse.json(newMessage, { status: 201 });
   } catch (error) {
-    console.error("Error in POST /api/chats/[id]/messages:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return internalError("POST /api/chats/[id]/messages", error);
   }
 }
 
@@ -75,16 +65,13 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requireAuth();
+  if (isAuthError(auth)) {
+    return unauthorized();
+  }
+  const { supabase } = auth;
+
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: chatId } = await params;
 
     const { data: messages, error: messagesError } = await supabase
@@ -94,19 +81,14 @@ export async function GET(
       .order("created_at", { ascending: true });
 
     if (messagesError) {
-      console.error("Error fetching messages:", messagesError);
-      return NextResponse.json(
-        { error: "Internal Server Error" },
-        { status: 500 },
+      return internalError(
+        "GET /api/chats/[id]/messages (fetch)",
+        messagesError,
       );
     }
 
     return NextResponse.json(messages, { status: 200 });
   } catch (error) {
-    console.error("Error in GET /api/chats/[id]/messages:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return internalError("GET /api/chats/[id]/messages", error);
   }
 }

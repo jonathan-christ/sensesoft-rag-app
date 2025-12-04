@@ -1,16 +1,32 @@
-import { streamChat } from "@/features/chat/actions/stream-chat";
-import { StreamChatRequest } from "@/server/llm/types";
 import { NextRequest, NextResponse } from "next/server";
+
+import { streamChat, RAGConfig } from "@/features/chat/actions/stream-chat";
+import { StreamChatRequest } from "@/server/llm/types";
+
+export const runtime = "nodejs";
+
+interface ChatRequestBody extends StreamChatRequest {
+  chatId?: string;
+  /** @deprecated Use `rag.topK` instead */
+  topK?: number;
+  rag?: RAGConfig;
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { chatId, messages, topK } =
-      (await req.json()) as StreamChatRequest & {
-        chatId?: string;
-        topK?: number;
-      };
+    const body = (await req.json()) as ChatRequestBody;
+    const { chatId, messages, topK, rag, max_tokens, temperature } = body;
 
-    const { stream } = await streamChat({ chatId, messages, topK });
+    // Support legacy topK param while migrating to rag config
+    const ragConfig: RAGConfig = rag ?? (topK ? { topK } : {});
+
+    const { stream } = await streamChat({
+      chatId,
+      messages,
+      rag: ragConfig,
+      max_tokens,
+      temperature,
+    });
 
     const readableStream = new ReadableStream({
       async start(controller) {
