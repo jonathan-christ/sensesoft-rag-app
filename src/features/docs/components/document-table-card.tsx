@@ -12,12 +12,14 @@ import { cn } from "@/features/shared/lib/utils";
 import { formatBytes } from "@/features/docs/lib/format-bytes";
 import { getStatusStyle, sortDocuments } from "@/features/docs/lib/status";
 import type { DocumentRow } from "@/features/docs/lib/types";
+import { hasWorkingDocuments } from "@/features/docs/lib/types";
 import {
   AlertTriangle,
   CheckCircle2,
   CircleSlash,
   Clock,
   FileText,
+  Info,
   Loader2,
   Pencil,
   RefreshCw,
@@ -32,6 +34,20 @@ const STATUS_ICONS: Record<string, ReactNode> = {
   ready: <CheckCircle2 className="size-3.5" />,
   error: <AlertTriangle className="size-3.5" />,
 };
+
+/**
+ * Format progress as a percentage string or fraction.
+ */
+function formatProgress(
+  progress: DocumentRow["progress"],
+): string | null {
+  if (!progress) return null;
+  const { processed_chunks, total_chunks } = progress;
+  if (total_chunks <= 0) return null;
+
+  const percent = Math.round((processed_chunks / total_chunks) * 100);
+  return `${percent}% (${processed_chunks}/${total_chunks})`;
+}
 
 type DocumentTableCardProps = {
   documents: DocumentRow[];
@@ -59,6 +75,7 @@ export function DocumentTableCard({
   deleteDocument,
 }: DocumentTableCardProps) {
   const sortedDocuments = sortDocuments(documents);
+  const isPolling = hasWorkingDocuments(documents);
 
   return (
     <Card className="overflow-hidden">
@@ -68,14 +85,20 @@ export function DocumentTableCard({
             <FileText className="size-5" />
             Document Library
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="flex items-center gap-2">
             Monitor ingestion status and review uploaded files.
+            {isPolling && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400">
+                <Loader2 className="size-3 animate-spin" />
+                Auto-refreshing
+              </span>
+            )}
           </CardDescription>
         </div>
         <Button
           type="button"
           variant="outline"
-          onClick={onRefresh}
+          onClick={() => onRefresh()}
           disabled={loading}
         >
           <RefreshCw className={cn("size-4", loading && "animate-spin")} />
@@ -149,19 +172,37 @@ export function DocumentTableCard({
                       {formatBytes(doc.size_bytes)}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium",
-                          getStatusStyle(doc.status),
-                        )}
-                      >
-                        {STATUS_ICONS[doc.status ?? ""] ?? (
-                          <Clock className="size-3.5" />
-                        )}
-                        <span className="capitalize">
-                          {doc.status ?? "unknown"}
+                      <div className="flex flex-col gap-1">
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium w-fit",
+                            getStatusStyle(doc.status),
+                          )}
+                        >
+                          {STATUS_ICONS[doc.status ?? ""] ?? (
+                            <Clock className="size-3.5" />
+                          )}
+                          <span className="capitalize">
+                            {doc.status ?? "unknown"}
+                          </span>
                         </span>
-                      </span>
+                        {/* Progress indicator for processing documents */}
+                        {doc.status === "processing" && doc.progress && (
+                          <span className="text-xs text-muted-foreground pl-1">
+                            {formatProgress(doc.progress)}
+                          </span>
+                        )}
+                        {/* Error reason tooltip for failed documents */}
+                        {doc.status === "error" && doc.error_reason && (
+                          <span
+                            className="text-xs text-destructive/80 pl-1 flex items-center gap-1 cursor-help max-w-[200px] truncate"
+                            title={doc.error_reason}
+                          >
+                            <Info className="size-3 flex-shrink-0" />
+                            <span className="truncate">{doc.error_reason}</span>
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {new Date(doc.created_at).toLocaleString()}

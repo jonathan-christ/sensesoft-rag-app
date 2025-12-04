@@ -1,21 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/features/auth/lib/supabase/server";
+import { requireAuth, isAuthError } from "@/server/auth";
+import {
+  unauthorized,
+  internalError,
+  notFound,
+  badRequest,
+} from "@/server/responses";
+import { DOCUMENTS_BUCKET } from "@/server/storage";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: documentId } = await params;
+
+  const auth = await requireAuth();
+  if (isAuthError(auth)) {
+    return unauthorized();
+  }
+  const { user, supabase } = auth;
+
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { data: document, error: documentError } = await supabase
       .from("documents")
       .select("id, filename, mime_type, size_bytes, status, created_at, meta")
@@ -24,18 +29,11 @@ export async function GET(
       .single();
 
     if (documentError) {
-      console.error("Error fetching document:", documentError);
-      return NextResponse.json(
-        { error: "Internal Server Error" },
-        { status: 500 },
-      );
+      return internalError("GET /api/docs/[id] (document)", documentError);
     }
 
     if (!document) {
-      return NextResponse.json(
-        { error: "Document not found" },
-        { status: 404 },
-      );
+      return notFound("Document not found");
     }
 
     const { count: chunkCount, error: chunkCountError } = await supabase
@@ -44,23 +42,25 @@ export async function GET(
       .eq("document_id", documentId);
 
     if (chunkCountError) {
-      console.error("Error fetching chunk count:", chunkCountError);
-      return NextResponse.json(
-        { error: "Internal Server Error" },
-        { status: 500 },
-      );
+      return internalError("GET /api/docs/[id] (chunks)", chunkCountError);
     }
+
+    // Fetch progress info from document_jobs
+    const { data: jobData, error: jobError } = await supabase
+      .from("document_jobs")
+      .select("total_chunks, processed_chunks, error")
+      .eq("document_id", documentId)
+      .single();
 
     return NextResponse.json({
       ...document,
       chunk_count: chunkCount,
+      total_chunks: jobData?.total_chunks ?? null,
+      processed_chunks: jobData?.processed_chunks ?? null,
+      error_reason: jobData?.error ?? null,
     });
   } catch (error) {
-    console.error("Error in GET /api/docs/[id]:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return internalError("GET /api/docs/[id]", error);
   }
 }
 
@@ -69,16 +69,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: documentId } = await params;
+
+  const auth = await requireAuth();
+  if (isAuthError(auth)) {
+    return unauthorized();
+  }
+  const { user, supabase } = auth;
+
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Fetch storage_path from document_jobs
     const { data: documentJob, error: documentJobError } = await supabase
       .from("document_jobs")
@@ -88,30 +86,25 @@ export async function DELETE(
       .single();
 
     if (documentJobError) {
-      console.error("Error fetching document job:", documentJobError);
-      return NextResponse.json(
-        { error: "Internal Server Error" },
-        { status: 500 },
+      return internalError(
+        "DELETE /api/docs/[id] (fetch job)",
+        documentJobError,
       );
     }
 
     if (!documentJob) {
-      return NextResponse.json(
-        { error: "Document job not found" },
-        { status: 404 },
-      );
+      return notFound("Document job not found");
     }
 
     // Delete file from Supabase storage
     const { error: storageError } = await supabase.storage
-      .from("documents") // Assuming the bucket name is "documents"
+      .from(DOCUMENTS_BUCKET)
       .remove([documentJob.storage_path]);
 
     if (storageError) {
-      console.error("Error deleting file from storage:", storageError);
-      return NextResponse.json(
-        { error: "Internal Server Error" },
-        { status: 500 },
+      return internalError(
+        "DELETE /api/docs/[id] (storage)",
+        storageError,
       );
     }
 
@@ -122,11 +115,7 @@ export async function DELETE(
       .eq("document_id", documentId);
 
     if (chunksError) {
-      console.error("Error deleting chunks:", chunksError);
-      return NextResponse.json(
-        { error: "Internal Server Error" },
-        { status: 500 },
-      );
+      return internalError("DELETE /api/docs/[id] (chunks)", chunksError);
     }
 
     // Delete document jobs records
@@ -136,10 +125,9 @@ export async function DELETE(
       .eq("document_id", documentId);
 
     if (documentJobsError) {
-      console.error("Error deleting document jobs:", documentJobsError);
-      return NextResponse.json(
-        { error: "Internal Server Error" },
-        { status: 500 },
+      return internalError(
+        "DELETE /api/docs/[id] (jobs)",
+        documentJobsError,
       );
     }
 
@@ -151,20 +139,15 @@ export async function DELETE(
       .eq("user_id", user.id);
 
     if (documentError) {
-      console.error("Error deleting document:", documentError);
-      return NextResponse.json(
-        { error: "Internal Server Error" },
-        { status: 500 },
+      return internalError(
+        "DELETE /api/docs/[id] (document)",
+        documentError,
       );
     }
 
     return NextResponse.json({ message: "Document deleted successfully" });
   } catch (error) {
-    console.error("Error in DELETE /api/docs/[id]:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return internalError("DELETE /api/docs/[id]", error);
   }
 }
 
@@ -173,22 +156,18 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: documentId } = await params;
-  try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const auth = await requireAuth();
+  if (isAuthError(auth)) {
+    return unauthorized();
+  }
+  const { user, supabase } = auth;
+
+  try {
     const { filename } = await req.json();
 
     if (!filename) {
-      return NextResponse.json(
-        { error: "Filename is required" },
-        { status: 400 },
-      );
+      return badRequest("Filename is required");
     }
 
     // Update filename in documents table
@@ -199,10 +178,9 @@ export async function PATCH(
       .eq("user_id", user.id);
 
     if (documentUpdateError) {
-      console.error("Error updating document filename:", documentUpdateError);
-      return NextResponse.json(
-        { error: "Internal Server Error" },
-        { status: 500 },
+      return internalError(
+        "PATCH /api/docs/[id] (document)",
+        documentUpdateError,
       );
     }
 
@@ -214,22 +192,14 @@ export async function PATCH(
       .eq("user_id", user.id);
 
     if (documentJobUpdateError) {
-      console.error(
-        "Error updating document job filename:",
+      return internalError(
+        "PATCH /api/docs/[id] (job)",
         documentJobUpdateError,
-      );
-      return NextResponse.json(
-        { error: "Internal Server Error" },
-        { status: 500 },
       );
     }
 
     return NextResponse.json({ message: "Document name updated successfully" });
   } catch (error) {
-    console.error("Error in PATCH /api/docs/[id]:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return internalError("PATCH /api/docs/[id]", error);
   }
 }

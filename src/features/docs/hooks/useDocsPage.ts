@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { DocumentRow } from "../lib/types";
+import { type DocumentRow, hasWorkingDocuments } from "../lib/types";
 import {
   deleteDocument,
   fetchDocuments,
   updateDocument,
   uploadDocuments,
 } from "../lib/api";
+
+/** Polling interval when documents are being processed (in ms) */
+const POLLING_INTERVAL = 4000;
 
 interface UseDocsPageOptions {
   limit?: number;
@@ -25,23 +28,65 @@ export function useDocsPage({ limit = 50 }: UseDocsPageOptions = {}) {
     null,
   );
   const [renameValue, setRenameValue] = useState<string>("");
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const mountedRef = useRef(true);
 
-  const loadDocuments = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const json = await fetchDocuments(limit);
-      setDocuments(json.documents ?? []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load documents");
-    } finally {
-      setLoading(false);
-    }
-  }, [limit]);
+  const loadDocuments = useCallback(
+    async (silent = false) => {
+      try {
+        if (!silent) setLoading(true);
+        setError(null);
+        const json = await fetchDocuments(limit);
+        if (mountedRef.current) {
+          setDocuments(json.documents ?? []);
+        }
+      } catch (err) {
+        if (mountedRef.current) {
+          setError(
+            err instanceof Error ? err.message : "Failed to load documents",
+          );
+        }
+      } finally {
+        if (mountedRef.current && !silent) {
+          setLoading(false);
+        }
+      }
+    },
+    [limit],
+  );
 
+  // Initial load
   useEffect(() => {
+    mountedRef.current = true;
     void loadDocuments();
+
+    return () => {
+      mountedRef.current = false;
+    };
   }, [loadDocuments]);
+
+  // Polling when documents are processing
+  useEffect(() => {
+    // Clear any existing polling
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+
+    // Start polling if any documents are in a working state
+    if (hasWorkingDocuments(documents)) {
+      pollingRef.current = setInterval(() => {
+        void loadDocuments(true); // Silent refresh (no loading indicator)
+      }, POLLING_INTERVAL);
+    }
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [documents, loadDocuments]);
 
   const addFiles = useCallback((newFiles: File[]) => {
     setFiles((prev) => [...prev, ...newFiles]);
