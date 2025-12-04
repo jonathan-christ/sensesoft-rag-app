@@ -4,24 +4,48 @@ import { createClient } from "@/features/auth/lib/supabase/server";
 import { streamChat as streamChatFromAdapter } from "@/server/llm/providers/gemini";
 import type { StreamChatRequest, StreamChatResponse } from "@/server/llm/types";
 import { searchRelevantChunks } from "@/server/rag/retrieval";
-import { buildPrompt, CitationItem } from "@/server/rag/prompt";
+import { buildPrompt } from "@/server/rag/prompt";
+
+export interface RAGConfig {
+  topK?: number;
+  minSimilarity?: number;
+  maxHistoryPairs?: number;
+}
+
+interface StreamChatOptions extends StreamChatRequest {
+  chatId?: string;
+  /** @deprecated Use `rag.topK` instead */
+  topK?: number;
+  rag?: RAGConfig;
+}
 
 // Stream chat completion (SSE-friendly)
 export async function streamChat(
-  req: StreamChatRequest & { chatId?: string; topK?: number },
+  req: StreamChatOptions,
 ): Promise<StreamChatResponse> {
-  const { messages, chatId, topK = 5, max_tokens, temperature } = req;
-  const maxTokens = max_tokens ?? 2048;
+  const { messages, chatId, topK, rag, max_tokens, temperature } = req;
+
+  // Support both legacy topK and new rag config
+  const effectiveTopK = rag?.topK ?? topK ?? 5;
+  const minSimilarity = rag?.minSimilarity ?? 0.5;
+  const maxHistoryPairs = rag?.maxHistoryPairs;
+
+  const maxTokens = max_tokens ?? 10000;
   const stream = new PassThrough();
 
   const latestMessage = messages[messages.length - 1];
   const userQuery = latestMessage?.content ?? "";
 
-  const rawChunks = await searchRelevantChunks(userQuery, topK);
+  const rawChunks = await searchRelevantChunks(
+    userQuery,
+    effectiveTopK,
+    minSimilarity,
+  );
   const { messages: promptMessages, citations } = buildPrompt({
     messages,
     chunks: rawChunks,
     chatId,
+    maxHistoryPairs,
   });
 
   const sendEvent = (event: Record<string, unknown>) => {
@@ -35,6 +59,12 @@ export async function streamChat(
   let fullResponse = "";
 
   try {
+    console.log("[stream-chat] Starting streamChatFromAdapter with", {
+      messageCount: promptMessages.length,
+      maxTokens,
+      temperature,
+    });
+
     await streamChatFromAdapter({
       max_tokens: maxTokens,
       temperature,
@@ -47,6 +77,11 @@ export async function streamChat(
         }
       },
       onFinal: async (finalText: string, meta) => {
+        console.log("[stream-chat] onFinal called", {
+          finalTextLength: finalText?.length ?? 0,
+          fullResponseLength: fullResponse?.length ?? 0,
+          finishReason: meta?.finishReason,
+        });
         const messageContent = finalText || fullResponse;
 
         if (chatId) {

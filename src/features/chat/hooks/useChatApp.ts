@@ -70,12 +70,13 @@ export function useChatApp() {
       if (response.ok) {
         const messagesData = await response.json();
         const formattedMessages: Message[] = messagesData.map(
-          (msg: Message) => ({
+          (msg: Message & { citations?: Citation[] }) => ({
             id: msg.id,
             chat_id: msg.chat_id,
             role: msg.role,
             content: msg.content,
             created_at: msg.created_at,
+            citations: msg.citations,
           }),
         );
         setMessages(formattedMessages);
@@ -324,7 +325,6 @@ export function useChatApp() {
           chatId: activeChatId,
           messages: chatMessages,
           temperature: 0.7,
-          max_tokens: 1000,
         }),
       });
 
