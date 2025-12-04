@@ -1,6 +1,7 @@
 import { PassThrough } from "stream";
 
 import { createClient } from "@/features/auth/lib/supabase/server";
+import type { Database } from "@/lib/database.types";
 import { streamChat as streamChatFromAdapter } from "@/server/llm/providers/gemini";
 import type { StreamChatRequest, StreamChatResponse } from "@/server/llm/types";
 import { searchRelevantChunks } from "@/server/rag/retrieval";
@@ -69,7 +70,6 @@ export async function streamChat(
       max_tokens: maxTokens,
       temperature,
       messages: promptMessages,
-      model: "gemini-2.5-flash",
       onToken: (delta: string) => {
         fullResponse += delta;
         if (delta) {
@@ -87,17 +87,15 @@ export async function streamChat(
         if (chatId) {
           try {
             const supabase = await createClient();
-            const { error } = await supabase.from("messages").insert([
-              {
-                chat_id: chatId,
-                role: "assistant",
-                content: messageContent,
-                citations:
-                  citations.length > 0
-                    ? (citations as unknown as Record<string, unknown>[])
-                    : null,
-              },
-            ]);
+            const { error } = await supabase.from("messages").insert({
+              chat_id: chatId,
+              role: "assistant",
+              content: messageContent,
+              citations:
+                citations.length > 0
+                  ? (citations as unknown as Database["public"]["Tables"]["messages"]["Insert"]["citations"])
+                  : null,
+            });
             if (error) {
               console.error("Error saving messages:", error);
             }

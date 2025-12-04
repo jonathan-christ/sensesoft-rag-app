@@ -3,11 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { Message, ChatRow, Citation } from "@/lib/types";
-import {
-  parseSSEStream,
-  formatLimitWarning,
-  type SSEEvent,
-} from "@/features/chat/lib/sse";
+import { parseSSEStream, formatLimitWarning } from "@/features/chat/lib/sse";
 
 export function useChatApp() {
   const [chats, setChats] = useState<ChatRow[]>([]);
