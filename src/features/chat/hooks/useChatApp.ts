@@ -3,49 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { Message, ChatRow, Citation } from "@/lib/types";
-
-// Backend is enabled in the page; mirror flag here to control streaming path if needed
-const USE_REAL_BACKEND = true;
-
-async function* parseSSEStream(response: Response) {
-  const reader = response.body?.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  if (!reader) throw new Error("No response body");
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      buffer += chunk;
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          try {
-            const data = JSON.parse(line.slice(6));
-            if (data.type === "token" && data.delta) {
-              yield { type: "token", delta: data.delta as string };
-            } else if (data.type === "sources" && data.items) {
-              yield { type: "sources", items: data.items as Citation[] };
-            } else if (data.type === "final" && data.message) {
-              yield { type: "final", content: data.message.content as string };
-              return;
-            } else if (data.type === "done") {
-              return;
-            }
-          } catch {
-            // ignore
-          }
-        } else if (line.trim()) {
-          yield { type: "token", delta: line as string };
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
-}
+import { parseSSEStream, formatLimitWarning } from "@/features/chat/lib/sse";
 
 export function useChatApp() {
   const [chats, setChats] = useState<ChatRow[]>([]);
@@ -65,6 +23,9 @@ export function useChatApp() {
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [creatingNewChat, setCreatingNewChat] = useState(false);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
+    null,
+  );
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -105,12 +66,13 @@ export function useChatApp() {
       if (response.ok) {
         const messagesData = await response.json();
         const formattedMessages: Message[] = messagesData.map(
-          (msg: Message) => ({
+          (msg: Message & { citations?: Citation[] }) => ({
             id: msg.id,
             chat_id: msg.chat_id,
             role: msg.role,
             content: msg.content,
             created_at: msg.created_at,
+            citations: msg.citations,
           }),
         );
         setMessages(formattedMessages);
@@ -334,66 +296,55 @@ export function useChatApp() {
 
   const handleStreamingResponse = useCallback(
     async (messageId: string, userInput: string) => {
-      try {
-        let response:
-          | {
-              stream: AsyncGenerator<{
-                type: string;
-                delta?: string;
-                items?: Citation[];
-              }>;
-              model: string;
-            }
-          | undefined;
-        if (USE_REAL_BACKEND) {
-          const chatMessages: Message[] = messages
-            .filter((m) => !m._streaming && !m._error)
-            .map((m) => ({
-              id: m.id,
-              chat_id: activeChatId,
-              role: m.role,
-              content: m.content,
-              created_at: m.created_at,
-            }));
-          chatMessages.push({
-            id: `user-${Date.now()}`,
-            chat_id: activeChatId,
-            role: "user",
-            content: userInput,
-            created_at: new Date().toISOString(),
-          });
+      // Build chat history for context
+      const chatMessages: Message[] = messages
+        .filter((m) => !m._streaming && !m._error)
+        .map((m) => ({
+          id: m.id,
+          chat_id: activeChatId,
+          role: m.role,
+          content: m.content,
+          created_at: m.created_at,
+        }));
+      chatMessages.push({
+        id: `user-${Date.now()}`,
+        chat_id: activeChatId,
+        role: "user",
+        content: userInput,
+        created_at: new Date().toISOString(),
+      });
 
-          const apiResponse = await fetch("/api/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              chatId: activeChatId,
-              messages: chatMessages,
-              temperature: 0.7,
-              max_tokens: 1000,
-            }),
-          });
-          if (!apiResponse.ok)
-            throw new Error(`API call failed: ${apiResponse.status}`);
-          response = {
-            stream: parseSSEStream(apiResponse),
-            model: "gemini-2.5-flash",
-          } as const;
-        }
-        if (!response) throw new Error("No response stream");
+      const apiResponse = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatId: activeChatId,
+          messages: chatMessages,
+          temperature: 0.7,
+        }),
+      });
 
-        let acc = "";
-        let newCitations: Citation[] = [];
+      if (!apiResponse.ok) {
+        throw new Error(`API call failed: ${apiResponse.status}`);
+      }
 
-        for await (const event of response.stream) {
-          if (event.type === "token") {
+      let acc = "";
+      let newCitations: Citation[] = [];
+      let limitNotice: string | undefined;
+      let streamError: string | undefined;
+
+      for await (const event of parseSSEStream(apiResponse)) {
+        switch (event.type) {
+          case "token":
             acc += event.delta;
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === messageId ? { ...m, content: acc } : m,
               ),
             );
-          } else if (event.type === "sources" && event.items) {
+            break;
+
+          case "sources":
             // Handle citations from the stream and store them in the message
             newCitations = event.items.map((item) => ({
               chunkId: item.chunkId,
@@ -408,16 +359,47 @@ export function useChatApp() {
                 m.id === messageId ? { ...m, citations: newCitations } : m,
               ),
             );
-          }
-        }
+            break;
 
+          case "limit":
+            // Response hit token limit - store notice for display
+            limitNotice = formatLimitWarning(event.tokens);
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId ? { ...m, _limitNotice: limitNotice } : m,
+              ),
+            );
+            break;
+
+          case "error":
+            // Server-side error during generation
+            streamError = event.message;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId
+                  ? { ...m, _streaming: false, _error: streamError }
+                  : m,
+              ),
+            );
+            setGlobalError(event.message);
+            return; // Stop processing on error
+
+          case "final":
+          case "done":
+            // Stream completed successfully
+            break;
+        }
+      }
+
+      // Finalize message state (if no error occurred)
+      if (!streamError) {
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === messageId ? { ...m, _streaming: false } : m,
+            m.id === messageId
+              ? { ...m, _streaming: false, _limitNotice: limitNotice }
+              : m,
           ),
         );
-      } catch (error) {
-        throw error;
       }
     },
     [messages, activeChatId],
@@ -590,6 +572,28 @@ export function useChatApp() {
     ],
   );
 
+  /**
+   * Select a message and display its citations.
+   * Opens the citations panel if not already open.
+   */
+  const selectMessage = useCallback(
+    (messageId: string, messageCitations: Citation[]) => {
+      setSelectedMessageId(messageId);
+      setCitations(messageCitations);
+      if (!showCitations) {
+        setShowCitations(true);
+      }
+    },
+    [showCitations],
+  );
+
+  /**
+   * Clear message selection (e.g., when panel closes).
+   */
+  const clearMessageSelection = useCallback(() => {
+    setSelectedMessageId(null);
+  }, []);
+
   return {
     // state
     chats,
@@ -606,6 +610,7 @@ export function useChatApp() {
     loading,
     messagesLoading,
     creatingNewChat,
+    selectedMessageId,
     bottomRef,
     filteredChats,
     activeChat,
@@ -626,5 +631,7 @@ export function useChatApp() {
     retryMessage,
     sendMessage,
     sendAudioMessage,
+    selectMessage,
+    clearMessageSelection,
   } as const;
 }

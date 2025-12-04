@@ -1,10 +1,18 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card } from "@/features/shared/components/ui/card";
 import { FileText } from "lucide-react";
-import type { Citation } from "@/lib/types";
+import type { Citation, Message } from "@/lib/types";
+import { cn } from "@/features/shared/lib/utils";
 
-// Utility component for hoverable document references
+// ─────────────────────────────────────────────────────────────────────────────
+// Inline Reference Components
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Small, subtle inline reference tag that appears in message text.
+ * Displays a truncated version and shows full text on hover.
+ */
 export function DocumentReferenceTooltip({
   reference,
   documentName,
@@ -14,17 +22,43 @@ export function DocumentReferenceTooltip({
   documentName: string;
   className?: string;
 }) {
+  // Extract just the display name (remove brackets)
+  const displayName = reference.replace(/^\[|\]$/g, "");
+
+  // Tooltip shows full reference if different from document name, otherwise just document name
+  const tooltipText =
+    displayName !== documentName
+      ? `${displayName}\n(Source: ${documentName})`
+      : documentName;
+
   return (
     <span
-      className={`inline-block px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-mono cursor-help border border-blue-200 hover:bg-blue-200 transition-colors ${className}`}
-      title={documentName}
+      className={cn(
+        "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm",
+        "text-[10px] font-medium leading-tight",
+        "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
+        "border border-blue-200/60 dark:border-blue-800/40",
+        "hover:bg-blue-100 hover:border-blue-300 dark:hover:bg-blue-900/50",
+        "cursor-help transition-colors",
+        className,
+      )}
+      title={tooltipText}
     >
-      {reference}
+      <FileText className="size-2.5 flex-shrink-0 opacity-70" />
+      <span className="truncate max-w-[140px]">{displayName}</span>
     </span>
   );
 }
 
-// Utility function to parse text and make document references hoverable
+/**
+ * Parse text and convert document references (e.g., `[filename.pdf]`) into
+ * hoverable tooltip components.
+ *
+ * Handles various reference formats:
+ * - Exact filename: `[Manual_v2.pdf]`
+ * - Filename with context: `[IEEE Paper Review.pdf - Reviewer #4]`
+ * - Doc ID fallback: `[Doc-abc12345]`
+ */
 export function parseDocumentReferences(
   text: string,
   citations: Citation[],
@@ -33,78 +67,198 @@ export function parseDocumentReferences(
     return [text];
   }
 
-  // Create reference mapping that matches the prompt building logic (group by document)
-  const referenceMap = new Map<
+  // Build lists of known filenames for matching
+  const knownFilenames: Array<{
+    filename: string;
+    documentName: string;
+    documentId: string;
+  }> = [];
+
+  // Exact match map for quick lookups
+  const exactMatchMap = new Map<
     string,
     { documentName: string; documentId: string }
   >();
-  const documentGroups = new Map<
-    string,
-    { filename?: string; referenceNumber: number }
-  >();
 
-  // First pass: group citations by document ID and assign reference numbers
   citations.forEach((citation) => {
-    if (!documentGroups.has(citation.documentId)) {
-      const referenceNumber = documentGroups.size + 1;
-      documentGroups.set(citation.documentId, {
-        filename: citation.filename,
-        referenceNumber,
-      });
-    }
-  });
+    if (citation.filename) {
+      // Get just the filename (no path)
+      const filename = citation.filename.split("/").pop() || citation.filename;
 
-  // Second pass: create reference mapping
-  documentGroups.forEach((group, documentId) => {
-    if (group.filename) {
-      const extension =
-        group.filename.split(".").pop()?.toUpperCase() || "FILE";
-      const filename = group.filename.split("/").pop() || group.filename;
-      referenceMap.set(`[${extension}${group.referenceNumber}]`, {
+      // Add to known filenames for partial matching
+      knownFilenames.push({
+        filename,
         documentName: filename,
-        documentId: documentId,
+        documentId: citation.documentId,
       });
+
+      // Also add name without extension
+      const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
+      if (nameWithoutExt !== filename) {
+        knownFilenames.push({
+          filename: nameWithoutExt,
+          documentName: filename,
+          documentId: citation.documentId,
+        });
+      }
+
+      // Exact match entries
+      exactMatchMap.set(`[${filename}]`, {
+        documentName: filename,
+        documentId: citation.documentId,
+      });
+      if (nameWithoutExt !== filename) {
+        exactMatchMap.set(`[${nameWithoutExt}]`, {
+          documentName: filename,
+          documentId: citation.documentId,
+        });
+      }
     }
 
-    // Also handle fallback references with document ID
-    const shortId = documentId.substring(0, 8);
-    referenceMap.set(`[Doc-${shortId}]`, {
-      documentName: group.filename || "Unknown Document",
-      documentId: documentId,
+    // Fallback: handle Doc-{shortId} references
+    const shortId = citation.documentId.substring(0, 8);
+    exactMatchMap.set(`[Doc-${shortId}]`, {
+      documentName: citation.filename || "Unknown Document",
+      documentId: citation.documentId,
     });
   });
 
-  // Pattern to match document references like [PDF1], [DOCX2], [Doc-abc12345]
+  // Sort known filenames by length (longest first) to match most specific first
+  knownFilenames.sort((a, b) => b.filename.length - a.filename.length);
+
+  /**
+   * Try to find a matching document for a bracketed reference.
+   * First tries exact match, then checks if any known filename is contained in the reference.
+   */
+  const findMatch = (
+    bracketedRef: string,
+  ): { documentName: string; documentId: string } | null => {
+    // Try exact match first
+    const exact = exactMatchMap.get(bracketedRef);
+    if (exact) return exact;
+
+    // Check if any known filename is contained in this reference
+    // e.g., "[IEEE Paper Review.pdf - Reviewer #4]" contains "IEEE Paper Review.pdf"
+    const innerText = bracketedRef.slice(1, -1); // Remove brackets
+    for (const known of knownFilenames) {
+      if (innerText.includes(known.filename)) {
+        return {
+          documentName: known.documentName,
+          documentId: known.documentId,
+        };
+      }
+    }
+
+    return null;
+  };
+
+  // Pattern to match any bracketed reference [...]
   const referencePattern = /(\[[^\]]+\])/g;
   const parts = text.split(referencePattern);
 
   return parts.map((part, index) => {
-    const referenceInfo = referenceMap.get(part);
-    if (referenceInfo) {
-      return (
-        <DocumentReferenceTooltip
-          key={`${referenceInfo.documentId}-${index}`}
-          reference={part}
-          documentName={referenceInfo.documentName}
-        />
-      );
+    if (part.startsWith("[") && part.endsWith("]")) {
+      const match = findMatch(part);
+      if (match) {
+        return (
+          <DocumentReferenceTooltip
+            key={`${match.documentId}-${index}`}
+            reference={part}
+            documentName={match.documentName}
+          />
+        );
+      }
     }
     return part;
   });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Citation Aggregation Utilities
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AggregatedDocument {
+  documentId: string;
+  filename?: string;
+  /** Total times this document was cited across messages */
+  referenceCount: number;
+  /** Average similarity score across all citations */
+  avgSimilarity: number;
+  /** Number of messages that referenced this document */
+  messageCount: number;
+}
+
+/**
+ * Aggregate citations from multiple messages into unique documents with stats.
+ */
+export function aggregateCitations(messages: Message[]): AggregatedDocument[] {
+  const docMap = new Map<
+    string,
+    {
+      filename?: string;
+      totalSimilarity: number;
+      citationCount: number;
+      messageIds: Set<string>;
+    }
+  >();
+
+  messages.forEach((msg) => {
+    if (msg.role !== "assistant" || !msg.citations?.length) return;
+
+    msg.citations.forEach((citation) => {
+      const existing = docMap.get(citation.documentId);
+      if (existing) {
+        existing.totalSimilarity += citation.similarity || 0;
+        existing.citationCount++;
+        existing.messageIds.add(msg.id);
+        // Update filename if we didn't have one
+        if (!existing.filename && citation.filename) {
+          existing.filename = citation.filename;
+        }
+      } else {
+        docMap.set(citation.documentId, {
+          filename: citation.filename,
+          totalSimilarity: citation.similarity || 0,
+          citationCount: 1,
+          messageIds: new Set([msg.id]),
+        });
+      }
+    });
+  });
+
+  return Array.from(docMap.entries())
+    .map(([documentId, data]) => ({
+      documentId,
+      filename: data.filename,
+      referenceCount: data.citationCount,
+      avgSimilarity:
+        data.citationCount > 0 ? data.totalSimilarity / data.citationCount : 0,
+      messageCount: data.messageIds.size,
+    }))
+    .sort((a, b) => b.referenceCount - a.referenceCount); // Most referenced first
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Citations Panel Component
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface CitationsPanelProps {
   show: boolean;
-  messagesLength: number;
-  backendLabel: string;
-  citations?: Citation[];
+  /** All messages in the chat (for history aggregation) */
+  messages: Message[];
+  /** Citations for a specific selected message (optional) */
+  selectedCitations?: Citation[];
+  /** Whether viewing a specific message's citations vs all history */
+  isSelectedView?: boolean;
+  backendLabel?: string;
 }
 
 export function CitationsPanel({
   show,
-  messagesLength,
+  messages,
+  selectedCitations,
+  isSelectedView = false,
   backendLabel,
-  citations = [],
 }: CitationsPanelProps) {
   const [documentDetails, setDocumentDetails] = useState<
     Map<
@@ -112,217 +266,195 @@ export function CitationsPanel({
       {
         id: string;
         filename: string;
-        chunk_count?: number;
         mime_type?: string;
         size_bytes?: number;
-        status?: string;
-        created_at?: string;
       }
     >
   >(new Map());
 
-  // Group citations by document (simplified - just show unique documents)
-  const uniqueDocuments = Array.from(
-    new Map(
-      citations.map((citation) => [
-        citation.documentId,
-        {
-          documentId: citation.documentId,
-          filename: citation.filename,
-          // Calculate average similarity for the document
-          avgSimilarity:
-            citations
-              .filter((c) => c.documentId === citation.documentId)
-              .reduce((sum, c) => sum + (c.similarity || 0), 0) /
-            citations.filter((c) => c.documentId === citation.documentId)
-              .length,
-          referenceCount: citations.filter(
-            (c) => c.documentId === citation.documentId,
-          ).length,
-        },
-      ]),
-    ).values(),
+  // Aggregate all citations from chat history
+  const historyDocuments = useMemo(
+    () => aggregateCitations(messages),
+    [messages],
   );
 
-  // Fetch document details when citations change
-  useEffect(() => {
-    const fetchDocumentDetails = async () => {
-      const newDetails = new Map();
-
-      for (const doc of uniqueDocuments) {
-        if (!documentDetails.has(doc.documentId)) {
-          try {
-            const response = await fetch(`/api/docs/${doc.documentId}`);
-            if (response.ok) {
-              const docData = await response.json();
-              newDetails.set(doc.documentId, docData);
-            }
-          } catch (error) {
-            console.error("Failed to fetch document details:", error);
-          }
+  // Documents to display: selected message's citations or full history
+  const displayDocuments = useMemo(() => {
+    if (isSelectedView && selectedCitations?.length) {
+      // Group selected citations by document
+      const docMap = new Map<
+        string,
+        { filename?: string; similarity: number; count: number }
+      >();
+      selectedCitations.forEach((c) => {
+        const existing = docMap.get(c.documentId);
+        if (existing) {
+          existing.similarity += c.similarity || 0;
+          existing.count++;
+        } else {
+          docMap.set(c.documentId, {
+            filename: c.filename,
+            similarity: c.similarity || 0,
+            count: 1,
+          });
         }
-      }
+      });
+      return Array.from(docMap.entries()).map(([documentId, data]) => ({
+        documentId,
+        filename: data.filename,
+        referenceCount: data.count,
+        avgSimilarity: data.count > 0 ? data.similarity / data.count : 0,
+        messageCount: 1,
+      }));
+    }
+    return historyDocuments;
+  }, [isSelectedView, selectedCitations, historyDocuments]);
+
+  // Fetch document details for displayed documents
+  useEffect(() => {
+    const fetchMissing = async () => {
+      const toFetch = displayDocuments.filter(
+        (d) => !documentDetails.has(d.documentId),
+      );
+      if (toFetch.length === 0) return;
+
+      const newDetails = new Map<
+        string,
+        typeof documentDetails extends Map<string, infer V> ? V : never
+      >();
+      await Promise.all(
+        toFetch.map(async (doc) => {
+          try {
+            const res = await fetch(`/api/docs/${doc.documentId}`);
+            if (res.ok) {
+              newDetails.set(doc.documentId, await res.json());
+            }
+          } catch {
+            // Ignore fetch errors
+          }
+        }),
+      );
 
       if (newDetails.size > 0) {
         setDocumentDetails((prev) => new Map([...prev, ...newDetails]));
       }
     };
 
-    if (uniqueDocuments.length > 0) {
-      fetchDocumentDetails();
+    if (displayDocuments.length > 0) {
+      fetchMissing();
     }
-  }, [citations, uniqueDocuments, documentDetails]);
+  }, [displayDocuments, documentDetails]);
 
   const formatSimilarity = (similarity?: number) => {
-    if (!similarity) return "";
+    if (!similarity) return null;
     return `${Math.round(similarity * 100)}%`;
   };
 
   const formatFileSize = (bytes?: number) => {
-    if (!bytes) return "";
+    if (!bytes) return null;
     const units = ["B", "KB", "MB", "GB"];
     let size = bytes;
     let unitIndex = 0;
-
     while (size >= 1024 && unitIndex < units.length - 1) {
       size /= 1024;
       unitIndex++;
     }
-
     return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
   };
 
-  // Function to create document reference mapping for hover functionality
-  // const createReferenceMapping = (): Map<string, HoverableReference> => {
-  //   const mapping = new Map<string, HoverableReference>();
+  if (!show) return null;
 
-  //   uniqueDocuments.forEach((doc) => {
-  //     const docDetails = documentDetails.get(doc.documentId);
-  //     const filename = docDetails?.filename || doc.filename;
-
-  //     if (filename) {
-  //       // Extract file extension for reference
-  //       const extension = filename.split(".").pop()?.toUpperCase() || "FILE";
-  //       const name = filename.split("/").pop() || filename;
-
-  //       // Create different possible reference formats that might appear in text
-  //       const shortName = name.split(".")[0];
-  //       const truncatedName =
-  //         shortName.length > 15
-  //           ? shortName.substring(0, 15) + "..."
-  //           : shortName;
-
-  //       // Map various possible reference formats to document info
-  //       mapping.set(`[${extension}]`, {
-  //         reference: `[${extension}]`,
-  //         documentName: name,
-  //         documentId: doc.documentId,
-  //       });
-
-  //       mapping.set(`[${truncatedName}]`, {
-  //         reference: `[${truncatedName}]`,
-  //         documentName: name,
-  //         documentId: doc.documentId,
-  //       });
-  //     }
-
-  //     // Fallback mapping for document ID based references
-  //     const shortId = doc.documentId.substring(0, 8);
-  //     mapping.set(`[Doc-${shortId}]`, {
-  //       reference: `[Doc-${shortId}]`,
-  //       documentName:
-  //         docDetails?.filename || doc.filename || "Unknown Document",
-  //       documentId: doc.documentId,
-  //     });
-  //   });
-
-  //   return mapping;
-  // };
-
-  if (!show) {
-    return null;
-  }
+  const totalCitations = displayDocuments.reduce(
+    (sum, d) => sum + d.referenceCount,
+    0,
+  );
 
   return (
     <div className="border-l border-border bg-card flex flex-col h-full min-h-0 w-full">
-      <div className="p-3 border-b border-border sticky top-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-base font-semibold flex-shrink-0">Sources</h3>
-          <div className="text-xs text-muted-foreground text-right">
-            {citations.length} citation{citations.length !== 1 ? "s" : ""}
-          </div>
+      {/* Header - more compact */}
+      <div className="px-2.5 py-2 border-b border-border sticky top-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">
+            {isSelectedView ? "Message Sources" : "All Sources"}
+          </h3>
+          <span className="text-[10px] text-muted-foreground tabular-nums">
+            {displayDocuments.length} doc
+            {displayDocuments.length !== 1 ? "s" : ""}
+            {totalCitations > 0 && ` · ${totalCitations} ref`}
+          </span>
         </div>
         {backendLabel && (
-          <div className="text-xs text-muted-foreground mt-1 break-words">
-            Powered by {backendLabel}
+          <div className="text-[10px] text-muted-foreground mt-0.5">
+            {backendLabel}
           </div>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        {citations.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">
-            <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p className="text-sm">No sources available</p>
-            <p className="text-xs mt-2">
-              {messagesLength === 0
-                ? "Start a conversation to see relevant sources"
-                : "The AI didn't reference any documents for this response"}
+      {/* Content - tighter spacing */}
+      <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1.5">
+        {displayDocuments.length === 0 ? (
+          <div className="text-center text-muted-foreground py-6">
+            <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
+            <p className="text-xs">No sources yet</p>
+            <p className="text-[10px] mt-1 text-muted-foreground/70">
+              {messages.length === 0
+                ? "Start chatting to see sources"
+                : "No documents referenced"}
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {uniqueDocuments.map((doc) => {
-              const docDetails = documentDetails.get(doc.documentId);
+          displayDocuments.map((doc) => {
+            const details = documentDetails.get(doc.documentId);
+            const filename =
+              details?.filename || doc.filename?.split("/").pop() || "Unknown";
+            const similarity = formatSimilarity(doc.avgSimilarity);
+            const size = formatFileSize(details?.size_bytes);
 
-              return (
-                <Card key={doc.documentId} className="p-3">
-                  <div className="flex items-start gap-3">
-                    <FileText className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium break-words leading-tight">
-                        {docDetails?.filename ||
-                          doc.filename ||
-                          "Unknown Document"}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1 break-words">
-                        Used {doc.referenceCount} time
-                        {doc.referenceCount !== 1 ? "s" : ""} in response
-                        {doc.avgSimilarity > 0 && (
-                          <span className="block sm:inline">
-                            {" • "}
-                            {formatSimilarity(doc.avgSimilarity)} relevance
-                          </span>
-                        )}
-                      </div>
-                      {docDetails && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {docDetails.mime_type && (
-                            <span className="capitalize">
-                              {docDetails.mime_type.split("/")[1]} file
-                            </span>
-                          )}
-                          {docDetails.size_bytes && (
-                            <span>
-                              {" • "}
-                              {formatFileSize(docDetails.size_bytes)}
-                            </span>
-                          )}
-                        </div>
+            return (
+              <Card
+                key={doc.documentId}
+                className="px-2 py-1.5 hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-start gap-2">
+                  <FileText className="size-3.5 text-primary flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium truncate leading-tight">
+                      {filename}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5 text-[10px] text-muted-foreground">
+                      <span>
+                        {doc.referenceCount}×
+                        {!isSelectedView &&
+                          doc.messageCount > 1 &&
+                          ` in ${doc.messageCount} msgs`}
+                      </span>
+                      {similarity && (
+                        <>
+                          <span className="text-border">·</span>
+                          <span>{similarity}</span>
+                        </>
+                      )}
+                      {size && (
+                        <>
+                          <span className="text-border">·</span>
+                          <span>{size}</span>
+                        </>
                       )}
                     </div>
                   </div>
-                </Card>
-              );
-            })}
-          </div>
+                </div>
+              </Card>
+            );
+          })
         )}
       </div>
 
-      {/* Footer */}
-      {citations.length > 0 && (
-        <div className="p-3 border-t border-border text-xs text-muted-foreground break-words">
-          Citations are ranked by relevance to your query
+      {/* Footer - minimal */}
+      {displayDocuments.length > 0 && (
+        <div className="px-2.5 py-1.5 border-t border-border text-[10px] text-muted-foreground/70">
+          {isSelectedView
+            ? "Sources for selected message"
+            : "All sources used in this chat"}
         </div>
       )}
     </div>

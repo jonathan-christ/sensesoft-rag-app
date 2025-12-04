@@ -13,19 +13,25 @@ import { ChatInput } from "./ChatInput";
 import { ResizableSplitter } from "@/features/shared/components/ui/resizable-splitter";
 import LoadingSpinner from "@/features/shared/components/loading-spinner";
 
+/** Default width for the citations panel (px) */
+const DEFAULT_PANEL_WIDTH = 280;
+const MIN_PANEL_WIDTH = 220;
+const MAX_PANEL_WIDTH = 480;
+
 export function ChatAppClient() {
   const ctx = useChatContext();
   const router = useRouter();
   const searchParams = useSearchParams();
   const sentInitial = useRef(false);
   const initialMessage = searchParams.get("message");
-  const [citationsPanelWidth, setCitationsPanelWidth] = useState(320);
+  const [citationsPanelWidth, setCitationsPanelWidth] =
+    useState(DEFAULT_PANEL_WIDTH);
 
   useEffect(() => {
     const savedWidth = localStorage.getItem("citationsPanelWidth");
     if (savedWidth) {
       const width = parseInt(savedWidth, 10);
-      if (width >= 250 && width <= 600) {
+      if (width >= MIN_PANEL_WIDTH && width <= MAX_PANEL_WIDTH) {
         setCitationsPanelWidth(width);
       }
     }
@@ -71,8 +77,8 @@ export function ChatAppClient() {
         <ResizableSplitter
           showRightPanel={ctx.showCitations}
           initialWidth={citationsPanelWidth}
-          minWidth={250}
-          maxWidth={600}
+          minWidth={MIN_PANEL_WIDTH}
+          maxWidth={MAX_PANEL_WIDTH}
           onWidthChange={handleWidthChange}
           className="flex-1"
           leftPanel={
@@ -145,6 +151,8 @@ export function ChatAppClient() {
                   retryMessage={ctx.retryMessage}
                   bottomRef={ctx.bottomRef}
                   loading={ctx.messagesLoading}
+                  selectedMessageId={ctx.selectedMessageId}
+                  onMessageSelect={ctx.selectMessage}
                 />
               )}
             </div>
@@ -152,9 +160,12 @@ export function ChatAppClient() {
           rightPanel={
             <CitationsPanel
               show={ctx.showCitations}
-              messagesLength={ctx.messages.length}
-              backendLabel={"Gemini API"}
-              citations={ctx.citations || []}
+              messages={ctx.messages}
+              selectedCitations={
+                ctx.selectedMessageId ? ctx.citations : undefined
+              }
+              isSelectedView={!!ctx.selectedMessageId}
+              backendLabel="Gemini API"
             />
           }
         />

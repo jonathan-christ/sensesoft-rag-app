@@ -1,11 +1,9 @@
-"use client";
-import { useRouter } from "next/navigation";
-import React, { useEffect } from "react";
+import { redirect } from "next/navigation";
 
+/**
+ * Root route redirects to /chats.
+ * Using server redirect avoids client-side flash.
+ */
 export default function Page() {
-  const router = useRouter();
-  useEffect(() => {
-    router.push("/chats");
-  }, [router]);
-  return <></>;
+  redirect("/chats");
 }
