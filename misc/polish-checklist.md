@@ -56,33 +56,40 @@ Focus on server-side config, LLM behavior, RAG, and tooling/tests. These tasks m
 
 Focus on API routes, Supabase schema/RLS, ingestion pipeline, and backend runtime details. These tasks mostly touch `src/app/api/*`, `src/server/*`, `supabase/functions/*`, and Supabase SQL migrations.
 
-- [ ] **DRY up “get authenticated Supabase client + user”**
+- [x] **DRY up "get authenticated Supabase client + user"**
   - **Problem**: Most API routes repeat the same boilerplate: create Supabase client, call `auth.getUser()`, 401 if missing user.
   - **Proposed solution**: Add a helper (e.g. `getUserAndClient(req)` in a `server/auth.ts` module) that returns `{ user, supabase }` or a `NextResponse` with 401. Refactor `/api/chats`, `/api/chats/[id]`, `/api/chats/[id]/messages`, `/api/docs`, `/api/docs/[id]`, `/api/ingest`, and `/api/audio/upload` to use it.
+  - **Implementation**: Created `src/server/auth.ts` with `requireAuth()` helper and `isAuthError()` type guard. Refactored all 7 API routes to use this helper.
 
-- [ ] **Confirm RLS coverage for all tenant-aware tables**
-  - **Problem**: Some multi-tenant behavior relies on app-side filtering; if RLS isn’t correctly set on all tables, a buggy route could leak data across users.
+- [x] **Confirm RLS coverage for all tenant-aware tables**
+  - **Problem**: Some multi-tenant behavior relies on app-side filtering; if RLS isn't correctly set on all tables, a buggy route could leak data across users.
   - **Proposed solution**: Verify row-level security policies for `chats`, `messages`, `documents`, `chunks`, `document_jobs`, and `document_chunk_jobs`. Ensure every table enforces `user_id = auth.uid()` (or equivalent) where appropriate, and that service-role operations used by edge functions are explicitly allowed.
+  - **Implementation**: Verified all tables have proper RLS. Added missing INSERT policy for `document_chunk_jobs` via migration `0005_rls_document_chunk_jobs_insert.sql`.
 
-- [ ] **Centralize bucket names and share between Next & edge (backend side)**
+- [x] **Centralize bucket names and share between Next & edge (backend side)**
   - **Problem**: Bucket name `"documents"` and others are duplicated between Next.js API routes and edge functions.
   - **Proposed solution**: Define a single `DOCUMENTS_BUCKET` constant (or env) used in both the Next.js side (`/api/ingest`, `/api/docs/[id]`) and edge functions (via `_shared/ingest.ts`). Do the same for any other buckets (e.g. `VOICE_BUCKET`), coordinating with AI / Env for env helper usage.
+  - **Implementation**: Created `src/server/storage.ts` with `DOCUMENTS_BUCKET` and `VOICE_MESSAGES_BUCKET` constants. Updated all API routes and edge functions to use these. Edge functions support `DOCUMENTS_BUCKET` env var fallback.
 
-- [ ] **Surface ingest progress and errors via API**
+- [x] **Surface ingest progress and errors via API**
   - **Problem**: The ingestion pipeline tracks detailed status and errors (`document_jobs`, `document_chunk_jobs`), but the UI only sees a coarse `status` on `documents`.
   - **Proposed solution**: Extend `/api/docs` (and/or add a dedicated endpoint) to return a high-level progress summary (e.g. `processed_chunks / total_chunks`) and a simple error reason when a document is in `error`.
+  - **Implementation**: Extended `/api/docs` and `/api/docs/[id]` to return `total_chunks`, `processed_chunks`, and `error_reason` fields from `document_jobs` table.
 
-- [ ] **Explicit runtime annotations for Node-only APIs**
+- [x] **Explicit runtime annotations for Node-only APIs**
   - **Problem**: Some routes rely on Node APIs (`PassThrough`, `crypto.randomUUID()`), which can be sensitive to Next runtime defaults.
   - **Proposed solution**: Add `export const runtime = "nodejs"` to Node-dependent route files (e.g. `/api/chat`, `/api/ingest`) to make their runtime requirements explicit.
+  - **Implementation**: Added `export const runtime = "nodejs"` to `/api/chat`, `/api/ingest`, and `/api/audio/upload` routes.
 
-- [ ] **Standardize error response helpers**
+- [x] **Standardize error response helpers**
   - **Problem**: Each route constructs its own `{ error: "Internal Server Error" }` shape by hand, which is repetitive and can drift.
   - **Proposed solution**: Add small helpers (e.g. `internalError(route, error)` and `unauthorized()`) to centralize logging and response shapes, then refactor routes to use them.
+  - **Implementation**: Created `src/server/responses.ts` with `unauthorized()`, `badRequest()`, `notFound()`, and `internalError()` helpers. Refactored all API routes to use these helpers.
 
-- [ ] **Backend-side citation persistence (optional stretch)**
-  - **Problem**: RAG citations currently only exist in memory and the SSE stream; they’re not persisted with messages.
+- [x] **Backend-side citation persistence (optional stretch)**
+  - **Problem**: RAG citations currently only exist in memory and the SSE stream; they're not persisted with messages.
   - **Proposed solution**: Add a `citations jsonb` column (or a `message_citations` table), write citations in `stream-chat` when saving assistant messages, and return them from `/api/chats/[id]/messages` so the UI can rehydrate sources on reload.
+  - **Implementation**: Added `citations jsonb` column to `messages` table via migration `0006_message_citations.sql`. Updated `stream-chat.ts` to persist citations when saving assistant messages. Messages API already returns all columns including citations.
 
 ---
 
