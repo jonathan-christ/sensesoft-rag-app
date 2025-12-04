@@ -1,8 +1,14 @@
-// src/server/config.ts
-export const CHAT_MODEL = process.env.CHAT_MODEL || "gemini-2.5-flash";
-export const EMBEDDING_MODEL =
-  process.env.EMBEDDING_MODEL || "gemini-embedding-001";
-export const EMBEDDING_DIM = process.env.EMBEDDING_DIM
-  ? parseInt(process.env.EMBEDDING_DIM, 10)
-  : 768;
-export const GOOGLE_GENAI_API_KEY = process.env.GOOGLE_GENAI_API_KEY;
+/**
+ * Server configuration - re-exports from centralized env module.
+ * Prefer importing from @/server/env directly for new code.
+ */
+export {
+  DEFAULT_CHAT_MODEL as CHAT_MODEL,
+  DEFAULT_EMBEDDING_MODEL as EMBEDDING_MODEL,
+  EMBEDDING_DIM,
+  getGoogleGenAiKey,
+} from "./env";
+
+// For backwards compatibility with existing code that imports GOOGLE_GENAI_API_KEY
+import { getGoogleGenAiKey } from "./env";
+export const GOOGLE_GENAI_API_KEY = getGoogleGenAiKey();
