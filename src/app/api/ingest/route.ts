@@ -1,7 +1,11 @@
-import { createClient } from "@/features/auth/lib/supabase/server";
+import { NextResponse } from "next/server";
+import { requireAuth, isAuthError } from "@/server/auth";
 import { createServiceClient } from "@/features/auth/lib/supabase/service";
 import { sanitizeFileName } from "@/features/docs/lib/filename";
-import { NextResponse } from "next/server";
+import { badRequest, internalError, unauthorized } from "@/server/responses";
+import { DOCUMENTS_BUCKET } from "@/server/storage";
+
+export const runtime = "nodejs";
 
 async function markDocumentStatus(
   supabaseService: ReturnType<typeof createServiceClient>,
@@ -22,7 +26,12 @@ async function markDocumentStatus(
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
+  const auth = await requireAuth();
+  if (isAuthError(auth)) {
+    return unauthorized();
+  }
+  const { user, supabase } = auth;
+
   const supabaseService = createServiceClient();
 
   try {
@@ -30,7 +39,7 @@ export async function POST(request: Request) {
     const files = formData.getAll("files") as File[];
 
     if (!files || files.length === 0) {
-      return NextResponse.json({ error: "No files uploaded" }, { status: 400 });
+      return badRequest("No files uploaded");
     }
 
     const jobIds: string[] = [];
@@ -39,7 +48,7 @@ export async function POST(request: Request) {
       const safeFileName = sanitizeFileName(file.name);
       const uniqueFileName = `${crypto.randomUUID()}-${safeFileName}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("documents") // Assuming a 'documents' bucket exists
+        .from(DOCUMENTS_BUCKET)
         .upload(uniqueFileName, file, {
           cacheControl: "3600",
           upsert: false,
@@ -48,16 +57,6 @@ export async function POST(request: Request) {
       if (uploadError) {
         console.error(`Error uploading file ${file.name}:`, uploadError);
         // Continue to next file, but log the error
-        continue;
-      }
-
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        console.error(`Error getting user for file ${file.name}:`, userError);
         continue;
       }
 
@@ -91,7 +90,7 @@ export async function POST(request: Request) {
 
       const documentId = documentInsertData.id;
 
-      // --- Start Ingestion Processing Logic (moved from process/[documentId]/route.ts) ---
+      // --- Start Ingestion Processing Logic ---
 
       if (!uploadData?.path) {
         console.error(
@@ -127,18 +126,15 @@ export async function POST(request: Request) {
     }
 
     if (jobIds.length === 0) {
-      return NextResponse.json(
-        { error: "No files were successfully processed" },
-        { status: 500 },
+      return internalError(
+        "POST /api/ingest",
+        new Error("No files were successfully processed"),
+        "No files were successfully processed",
       );
     }
 
     return NextResponse.json({ jobIds }, { status: 200 });
   } catch (error) {
-    console.error("Unhandled error during file upload and processing:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return internalError("POST /api/ingest", error);
   }
 }

@@ -11,7 +11,10 @@ const GOOGLE_GENAI_API_KEY = Deno.env.get("GOOGLE_GENAI_API_KEY");
 const EMBEDDING_MODEL =
   Deno.env.get("EMBEDDING_MODEL") ?? "gemini-embedding-001";
 const EMBEDDING_DIM = Number(Deno.env.get("EMBEDDING_DIM") ?? "768");
-const STORAGE_BUCKET = Deno.env.get("STORAGE_BUCKET") ?? "documents";
+const STORAGE_BUCKET =
+  Deno.env.get("DOCUMENTS_BUCKET") ??
+  Deno.env.get("STORAGE_BUCKET") ??
+  "documents";
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error(
