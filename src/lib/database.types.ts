@@ -218,21 +218,27 @@ export type Database = {
       };
       messages: {
         Row: {
+          audio_url: string | null;
           chat_id: string;
+          citations: Json | null;
           content: string;
           created_at: string;
           id: string;
           role: string;
         };
         Insert: {
+          audio_url?: string | null;
           chat_id: string;
+          citations?: Json | null;
           content: string;
           created_at?: string;
           id?: string;
           role: string;
         };
         Update: {
+          audio_url?: string | null;
           chat_id?: string;
+          citations?: Json | null;
           content?: string;
           created_at?: string;
           id?: string;

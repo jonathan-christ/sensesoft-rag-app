@@ -22,8 +22,11 @@ export interface StreamChatResponse {
   model: string;
 }
 
+/**
+ * Options for streaming chat completion.
+ * The model is determined by server config (DEFAULT_CHAT_MODEL).
+ */
 export interface ChatStreamOptions extends StreamChatRequest {
-  model: string;
   onToken: (delta: string) => void;
   onFinal?: (full: string, meta?: { finishReason?: string }) => void;
   signal?: AbortSignal;
