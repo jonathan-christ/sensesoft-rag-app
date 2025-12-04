@@ -318,7 +318,10 @@ export function CitationsPanel({
       );
       if (toFetch.length === 0) return;
 
-      const newDetails = new Map<string, (typeof documentDetails extends Map<string, infer V> ? V : never)>();
+      const newDetails = new Map<
+        string,
+        typeof documentDetails extends Map<string, infer V> ? V : never
+      >();
       await Promise.all(
         toFetch.map(async (doc) => {
           try {
@@ -403,9 +406,7 @@ export function CitationsPanel({
           displayDocuments.map((doc) => {
             const details = documentDetails.get(doc.documentId);
             const filename =
-              details?.filename ||
-              doc.filename?.split("/").pop() ||
-              "Unknown";
+              details?.filename || doc.filename?.split("/").pop() || "Unknown";
             const similarity = formatSimilarity(doc.avgSimilarity);
             const size = formatFileSize(details?.size_bytes);
 

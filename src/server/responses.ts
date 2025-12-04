@@ -49,4 +49,3 @@ export function internalError(
     status: 500,
   });
 }
-

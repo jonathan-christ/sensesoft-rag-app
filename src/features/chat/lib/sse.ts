@@ -241,4 +241,3 @@ export function isTerminalEvent(
 export function formatLimitWarning(tokens: number): string {
   return `Response was limited to ${tokens.toLocaleString()} tokens. The answer may be incomplete.`;
 }
-

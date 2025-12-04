@@ -24,7 +24,8 @@ export function ChatAppClient() {
   const searchParams = useSearchParams();
   const sentInitial = useRef(false);
   const initialMessage = searchParams.get("message");
-  const [citationsPanelWidth, setCitationsPanelWidth] = useState(DEFAULT_PANEL_WIDTH);
+  const [citationsPanelWidth, setCitationsPanelWidth] =
+    useState(DEFAULT_PANEL_WIDTH);
 
   useEffect(() => {
     const savedWidth = localStorage.getItem("citationsPanelWidth");
@@ -160,7 +161,9 @@ export function ChatAppClient() {
             <CitationsPanel
               show={ctx.showCitations}
               messages={ctx.messages}
-              selectedCitations={ctx.selectedMessageId ? ctx.citations : undefined}
+              selectedCitations={
+                ctx.selectedMessageId ? ctx.citations : undefined
+              }
               isSelectedView={!!ctx.selectedMessageId}
               backendLabel="Gemini API"
             />

@@ -102,10 +102,7 @@ export async function DELETE(
       .remove([documentJob.storage_path]);
 
     if (storageError) {
-      return internalError(
-        "DELETE /api/docs/[id] (storage)",
-        storageError,
-      );
+      return internalError("DELETE /api/docs/[id] (storage)", storageError);
     }
 
     // Delete associated chunks
@@ -125,10 +122,7 @@ export async function DELETE(
       .eq("document_id", documentId);
 
     if (documentJobsError) {
-      return internalError(
-        "DELETE /api/docs/[id] (jobs)",
-        documentJobsError,
-      );
+      return internalError("DELETE /api/docs/[id] (jobs)", documentJobsError);
     }
 
     // Delete document record
@@ -139,10 +133,7 @@ export async function DELETE(
       .eq("user_id", user.id);
 
     if (documentError) {
-      return internalError(
-        "DELETE /api/docs/[id] (document)",
-        documentError,
-      );
+      return internalError("DELETE /api/docs/[id] (document)", documentError);
     }
 
     return NextResponse.json({ message: "Document deleted successfully" });

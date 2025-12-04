@@ -38,9 +38,7 @@ const STATUS_ICONS: Record<string, ReactNode> = {
 /**
  * Format progress as a percentage string or fraction.
  */
-function formatProgress(
-  progress: DocumentRow["progress"],
-): string | null {
+function formatProgress(progress: DocumentRow["progress"]): string | null {
   if (!progress) return null;
   const { processed_chunks, total_chunks } = progress;
   if (total_chunks <= 0) return null;

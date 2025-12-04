@@ -59,8 +59,7 @@ export function getAssemblyApiKey(): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Default chat model for LLM completions */
-export const DEFAULT_CHAT_MODEL =
-  process.env.CHAT_MODEL ?? "gemini-2.5-flash";
+export const DEFAULT_CHAT_MODEL = process.env.CHAT_MODEL ?? "gemini-2.5-flash";
 
 /** Default embedding model for vector generation */
 export const DEFAULT_EMBEDDING_MODEL =
@@ -82,11 +81,9 @@ export function getEmbeddingConfig() {
 // Storage Buckets
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const DOCUMENTS_BUCKET =
-  process.env.STORAGE_BUCKET ?? "documents";
+export const DOCUMENTS_BUCKET = process.env.STORAGE_BUCKET ?? "documents";
 
-export const VOICE_BUCKET =
-  process.env.VOICE_BUCKET ?? "voice-recordings";
+export const VOICE_BUCKET = process.env.VOICE_BUCKET ?? "voice-recordings";
 
 export function getBucketNames() {
   return {
@@ -94,4 +91,3 @@ export function getBucketNames() {
     voice: VOICE_BUCKET,
   };
 }
-

@@ -54,4 +54,3 @@ export function isAuthError(
 ): result is AuthError {
   return "error" in result && result.error === true;
 }
-

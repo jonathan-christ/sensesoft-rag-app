@@ -15,4 +15,3 @@ export const DOCUMENTS_BUCKET =
  */
 export const VOICE_MESSAGES_BUCKET =
   process.env.VOICE_MESSAGES_BUCKET ?? "voice_messages";
-

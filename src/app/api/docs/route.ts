@@ -22,10 +22,9 @@ export async function GET(req: NextRequest) {
       count,
     } = await supabase
       .from("documents")
-      .select(
-        "id, filename, mime_type, size_bytes, status, created_at, meta",
-        { count: "exact" },
-      )
+      .select("id, filename, mime_type, size_bytes, status, created_at, meta", {
+        count: "exact",
+      })
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
