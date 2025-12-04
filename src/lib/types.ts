@@ -18,6 +18,8 @@ export interface Citation {
   documentId: string;
   filename?: string;
   similarity?: number;
+  /** Short preview of the chunk content */
+  snippet?: string;
 }
 
 export interface Message {

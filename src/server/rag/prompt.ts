@@ -7,6 +7,8 @@ export interface CitationItem {
   documentId: string;
   filename?: string;
   similarity?: number;
+  /** Short preview of the chunk content (first ~160 chars) */
+  snippet?: string;
 }
 
 export interface BuildPromptOptions {
@@ -23,9 +25,63 @@ export interface BuildPromptResult {
 }
 
 const DEFAULT_SYSTEM_PROMPT =
-  "You are a helpful AI assistant. Use only the information in SOURCES to answer. If the SOURCES do not contain the answer, say you don't know. Cite each fact using the document references provided in brackets (e.g., [PDF1], [DOCX2]).";
+  "You are a helpful AI assistant. Use only the information in SOURCES to answer. If the SOURCES do not contain the answer, say you don't know. Cite each fact using the document filename references provided in brackets (e.g., [report.pdf], [manual.docx]).";
 
 const DEFAULT_HISTORY_PAIRS = 4;
+
+/** Max length for reference labels */
+const MAX_REFERENCE_LENGTH = 30;
+
+/** Max length for snippet preview */
+const MAX_SNIPPET_LENGTH = 160;
+
+/**
+ * Creates a clean reference label from a filename.
+ * - Truncates to MAX_REFERENCE_LENGTH chars
+ * - Falls back to Doc-{id} if no filename
+ */
+function createReferenceLabel(
+  filename: string | undefined | null,
+  documentId: string,
+): string {
+  if (!filename) {
+    // Use first 8 chars of document ID as fallback
+    return `Doc-${documentId.slice(0, 8)}`;
+  }
+
+  // Clean the filename - remove path if present
+  const basename = filename.split(/[/\\]/).pop() || filename;
+
+  // Truncate if too long
+  if (basename.length <= MAX_REFERENCE_LENGTH) {
+    return basename;
+  }
+
+  // Keep extension visible when truncating
+  const lastDot = basename.lastIndexOf(".");
+  if (lastDot > 0 && basename.length - lastDot <= 6) {
+    const ext = basename.slice(lastDot);
+    const nameWithoutExt = basename.slice(0, lastDot);
+    const truncatedName = nameWithoutExt.slice(
+      0,
+      MAX_REFERENCE_LENGTH - ext.length - 1,
+    );
+    return `${truncatedName}…${ext}`;
+  }
+
+  return `${basename.slice(0, MAX_REFERENCE_LENGTH - 1)}…`;
+}
+
+/**
+ * Creates a snippet preview from chunk content.
+ */
+function createSnippet(content: string): string {
+  const cleaned = content.replace(/\s+/g, " ").trim();
+  if (cleaned.length <= MAX_SNIPPET_LENGTH) {
+    return cleaned;
+  }
+  return `${cleaned.slice(0, MAX_SNIPPET_LENGTH - 1)}…`;
+}
 
 function buildContextBlock(chunks: RetrievedChunk[]): {
   context: string;
@@ -41,16 +97,14 @@ function buildContextBlock(chunks: RetrievedChunk[]): {
     }
   >();
 
-  // First pass: group chunks by document ID
+  // First pass: group chunks by document ID and create filename-based references
   chunks.forEach((chunk) => {
     if (!documentGroups.has(chunk.document_id)) {
-      const extension =
-        chunk.filename?.split(".").pop()?.toUpperCase() || "FILE";
-      const referenceNumber = documentGroups.size + 1;
+      const label = createReferenceLabel(chunk.filename, chunk.document_id);
       documentGroups.set(chunk.document_id, {
         chunks: [],
         filename: chunk.filename,
-        reference: `[${extension}${referenceNumber}]`,
+        reference: `[${label}]`,
       });
     }
     documentGroups.get(chunk.document_id)!.chunks.push(chunk);
@@ -70,6 +124,7 @@ function buildContextBlock(chunks: RetrievedChunk[]): {
         documentId: chunk.document_id,
         filename: chunk.filename ?? undefined,
         similarity: chunk.similarity ?? undefined,
+        snippet: createSnippet(chunk.content),
       });
     });
   });
@@ -133,4 +188,4 @@ export function buildPrompt({
   };
 }
 
-export { DEFAULT_SYSTEM_PROMPT };
+export { DEFAULT_SYSTEM_PROMPT, createReferenceLabel, createSnippet };
